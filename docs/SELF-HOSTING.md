@@ -14,8 +14,9 @@ curl -O https://raw.githubusercontent.com/mfelippe/ocean-flow/main/docker-compos
 cat > .env <<'EOF'
 AUTH_SECRET=cole-aqui-o-resultado-de-openssl-rand-base64-32
 AUTH_URL=https://kanban.seu-dominio.com
-POSTGRES_PASSWORD=uma-senha-forte
 PORT=3000
+# Opcional: use um Postgres externo (senão usa o banco embutido):
+# DATABASE_URL=postgresql://usuario:senha@host:5432/banco?schema=public
 EOF
 
 docker compose -f docker-compose.release.yml up -d
@@ -23,6 +24,11 @@ docker compose -f docker-compose.release.yml up -d
 
 Gere o `AUTH_SECRET` com `openssl rand -base64 32`. A aplicação sobe na porta
 `PORT` (padrão 3000); as migrations rodam automaticamente no start.
+
+> **Banco:** por padrão sobe um PostgreSQL embutido (não exposto). Para usar um
+> banco **externo/gerenciado**, defina `DATABASE_URL` apontando para ele. O
+> start valida a URL: se não for `postgresql://...`, o container falha com uma
+> mensagem clara em vez de subir quebrado.
 
 > Para HTTPS, coloque um proxy reverso (Caddy, Nginx, Traefik) na frente e
 > aponte `AUTH_URL` para o domínio público.
@@ -39,14 +45,13 @@ docker compose up --build -d
 
 ## Variáveis de ambiente
 
-| Variável            | Obrigatória | Descrição                                   |
-| ------------------- | ----------- | ------------------------------------------- |
-| `AUTH_SECRET`       | sim         | Segredo do Auth.js (`openssl rand -base64 32`) |
-| `AUTH_URL`          | recomendada | URL pública (ex.: `https://...`)            |
-| `POSTGRES_PASSWORD` | sim (release) | Senha do Postgres                         |
-| `PORT`              | não         | Porta exposta (padrão 3000)                 |
-| `DATABASE_URL`      | —           | Definida pelo compose                       |
-| `UPLOAD_DIR`        | —           | Diretório de anexos (volume `/data/uploads`) |
+| Variável        | Obrigatória | Descrição                                              |
+| --------------- | ----------- | ------------------------------------------------------ |
+| `AUTH_SECRET`   | sim         | Segredo do Auth.js (`openssl rand -base64 32`)         |
+| `AUTH_URL`      | recomendada | URL pública (ex.: `https://...`)                       |
+| `DATABASE_URL`  | não\*       | Postgres externo (`postgresql://...`). Padrão: banco embutido. \*Validada no start — erro se não for PostgreSQL. |
+| `PORT`          | não         | Porta exposta (padrão 3000)                            |
+| `UPLOAD_DIR`    | —           | Diretório de anexos (volume `/data/uploads`)           |
 
 ## Dados e volumes
 

@@ -30,6 +30,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # standalone (superset — o server.js continua funcionando).
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder /app/scripts/check-env.mjs ./scripts/check-env.mjs
 
 # Diretório de anexos (montado como volume em produção).
 RUN mkdir -p /data/uploads && chown -R nextjs:nodejs /data
@@ -39,5 +40,5 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME=0.0.0.0
 
-# Aplica migrations e sobe o servidor.
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]
+# Valida o ambiente, aplica migrations e sobe o servidor.
+CMD ["sh", "-c", "node scripts/check-env.mjs && node node_modules/prisma/build/index.js migrate deploy && node server.js"]
