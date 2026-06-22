@@ -33,5 +33,16 @@ export const cardSchema = z.object({
   description: z.string().trim().max(5000).optional().or(z.literal("")),
 });
 
+export const labelSchema = z.object({
+  name: z.string().trim().min(1, "Informe o nome da label.").max(40),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Cor inválida (use formato #RRGGBB)."),
+});
+
+export const commentSchema = z.object({
+  body: z.string().trim().min(1, "Escreva um comentário.").max(5000),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

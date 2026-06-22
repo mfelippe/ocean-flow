@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireBoardWrite, requireOrgWrite } from "@/lib/authz";
 import { boardSchema, columnSchema, cardSchema } from "@/lib/validations";
 import { rankBetween } from "@/lib/rank";
+import { logActivity } from "@/lib/activity";
 
 export type FormState = { error?: string } | undefined;
 
@@ -142,7 +143,7 @@ export async function createCard(
     where: { columnId, archivedAt: null },
     orderBy: { rank: "desc" },
   });
-  await prisma.card.create({
+  const created = await prisma.card.create({
     data: {
       columnId,
       title: parsed.data.title,
@@ -151,32 +152,14 @@ export async function createCard(
       createdById: user.id,
     },
   });
+  await logActivity({
+    boardId: column.boardId,
+    cardId: created.id,
+    actorId: user.id,
+    type: "CARD_CREATED",
+    payload: { title: created.title },
+  });
   revalidatePath(boardPath(board.organization.slug, column.boardId));
-}
-
-export async function updateCard(
-  cardId: string,
-  formData: FormData,
-): Promise<void> {
-  const card = await prisma.card.findUnique({
-    where: { id: cardId },
-    include: { column: true },
-  });
-  if (!card) return;
-  const { board } = await requireBoardWrite(card.column.boardId);
-  const parsed = cardSchema.safeParse({
-    title: formData.get("title"),
-    description: formData.get("description") ?? "",
-  });
-  if (!parsed.success) return;
-  await prisma.card.update({
-    where: { id: cardId },
-    data: {
-      title: parsed.data.title,
-      description: parsed.data.description || null,
-    },
-  });
-  revalidatePath(boardPath(board.organization.slug, card.column.boardId));
 }
 
 export async function archiveCard(cardId: string): Promise<void> {
@@ -185,10 +168,17 @@ export async function archiveCard(cardId: string): Promise<void> {
     include: { column: true },
   });
   if (!card) return;
-  const { board } = await requireBoardWrite(card.column.boardId);
+  const { board, user } = await requireBoardWrite(card.column.boardId);
   await prisma.card.update({
     where: { id: cardId },
     data: { archivedAt: new Date() },
+  });
+  await logActivity({
+    boardId: card.column.boardId,
+    cardId,
+    actorId: user.id,
+    type: "CARD_ARCHIVED",
+    payload: { title: card.title },
   });
   revalidatePath(boardPath(board.organization.slug, card.column.boardId));
 }
@@ -211,7 +201,7 @@ export async function moveCardTo(
   });
   if (!card) return;
 
-  const { board } = await requireBoardWrite(card.column.boardId);
+  const { board, user } = await requireBoardWrite(card.column.boardId);
 
   // O destino precisa pertencer ao mesmo board (não cruza organizações/quadros).
   const target = await prisma.column.findUnique({ where: { id: toColumnId } });
@@ -221,5 +211,15 @@ export async function moveCardTo(
     where: { id: cardId },
     data: { columnId: toColumnId, rank },
   });
+  // Só registra como movimentação quando muda de coluna.
+  if (toColumnId !== card.columnId) {
+    await logActivity({
+      boardId: card.column.boardId,
+      cardId,
+      actorId: user.id,
+      type: "CARD_MOVED",
+      payload: { from: card.column.name, to: target.name },
+    });
+  }
   revalidatePath(boardPath(board.organization.slug, card.column.boardId));
 }

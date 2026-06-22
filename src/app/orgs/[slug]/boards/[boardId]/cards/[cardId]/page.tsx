@@ -1,0 +1,224 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { getBoardContext } from "@/lib/authz";
+import {
+  addComment,
+  createLabel,
+  deleteComment,
+  setDueDate,
+  toggleCardLabel,
+  updateCardContent,
+} from "@/app/actions/cards";
+import { CardContent } from "@/components/card-content";
+import { AddCommentForm } from "@/components/add-comment-form";
+import { CreateLabelForm } from "@/components/create-label-form";
+import { inputClass } from "@/components/form";
+
+function activityText(type: string, payload: unknown): string {
+  const p = (payload ?? {}) as Record<string, unknown>;
+  switch (type) {
+    case "CARD_CREATED":
+      return "criou o card";
+    case "CARD_MOVED":
+      return `moveu de "${p.from}" para "${p.to}"`;
+    case "CARD_UPDATED":
+      return "editou o card";
+    case "CARD_ARCHIVED":
+      return "arquivou o card";
+    case "COMMENT_ADDED":
+      return "comentou";
+    default:
+      return type;
+  }
+}
+
+function fmt(d: Date): string {
+  return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+export default async function CardPage({
+  params,
+}: {
+  params: Promise<{ slug: string; boardId: string; cardId: string }>;
+}) {
+  const { slug, boardId, cardId } = await params;
+  const { role, board } = await getBoardContext(boardId);
+  if (board.organization.slug !== slug) notFound();
+
+  const canWrite = role !== "VIEWER";
+  const boardHref = `/orgs/${slug}/boards/${boardId}`;
+
+  const card = await prisma.card.findUnique({
+    where: { id: cardId },
+    include: {
+      column: true,
+      labels: { include: { label: true } },
+      comments: { include: { author: true }, orderBy: { createdAt: "desc" } },
+    },
+  });
+  if (!card || card.column.boardId !== boardId) notFound();
+
+  const boardLabels = await prisma.label.findMany({
+    where: { boardId },
+    orderBy: { name: "asc" },
+  });
+  const activities = await prisma.activity.findMany({
+    where: { cardId },
+    include: { actor: true },
+    orderBy: { createdAt: "desc" },
+    take: 30,
+  });
+
+  const assigned = new Set(card.labels.map((cl) => cl.labelId));
+  const dueValue = card.dueDate ? card.dueDate.toISOString().slice(0, 10) : "";
+
+  return (
+    <main className="mx-auto max-w-4xl px-6 py-8">
+      <Link href={boardHref} className="text-sm text-slate-400 hover:text-teal-400">
+        ← {card.column.name}
+      </Link>
+
+      <div className="mt-4 grid gap-8 md:grid-cols-[1fr_18rem]">
+        {/* Coluna principal */}
+        <div className="space-y-8">
+          <CardContent
+            title={card.title}
+            description={card.description}
+            canWrite={canWrite}
+            action={updateCardContent.bind(null, cardId)}
+          />
+
+          <section>
+            <h2 className="mb-3 text-sm font-semibold text-slate-300">
+              Comentários ({card.comments.length})
+            </h2>
+            {canWrite && (
+              <div className="mb-4">
+                <AddCommentForm action={addComment.bind(null, cardId)} />
+              </div>
+            )}
+            <ul className="space-y-3">
+              {card.comments.map((c) => (
+                <li
+                  key={c.id}
+                  className="rounded-lg border border-slate-800 bg-slate-900/40 p-3"
+                >
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span className="font-medium text-slate-300">
+                      {c.author?.name ?? "—"}
+                    </span>
+                    <span>{fmt(c.createdAt)}</span>
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{c.body}</p>
+                  {canWrite && (
+                    <form
+                      action={deleteComment.bind(null, c.id)}
+                      className="mt-1 text-right"
+                    >
+                      <button className="text-xs text-slate-600 hover:text-red-400">
+                        remover
+                      </button>
+                    </form>
+                  )}
+                </li>
+              ))}
+              {card.comments.length === 0 && (
+                <li className="text-sm text-slate-500">Nenhum comentário ainda.</li>
+              )}
+            </ul>
+          </section>
+        </div>
+
+        {/* Barra lateral */}
+        <aside className="space-y-6">
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Labels
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {boardLabels.map((l) => {
+                const on = assigned.has(l.id);
+                return canWrite ? (
+                  <form
+                    key={l.id}
+                    action={toggleCardLabel.bind(null, cardId, l.id)}
+                  >
+                    <button
+                      className="rounded px-2 py-1 text-xs font-medium text-white transition"
+                      style={{ backgroundColor: l.color, opacity: on ? 1 : 0.35 }}
+                      title={on ? "Remover" : "Adicionar"}
+                    >
+                      {on ? "✓ " : ""}
+                      {l.name}
+                    </button>
+                  </form>
+                ) : (
+                  on && (
+                    <span
+                      key={l.id}
+                      className="rounded px-2 py-1 text-xs font-medium text-white"
+                      style={{ backgroundColor: l.color }}
+                    >
+                      {l.name}
+                    </span>
+                  )
+                );
+              })}
+              {boardLabels.length === 0 && (
+                <p className="text-xs text-slate-500">Nenhuma label no quadro.</p>
+              )}
+            </div>
+            {canWrite && (
+              <div className="mt-3">
+                <CreateLabelForm action={createLabel.bind(null, boardId)} />
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Prazo
+            </h3>
+            {canWrite ? (
+              <form
+                action={setDueDate.bind(null, cardId)}
+                className="flex items-center gap-2"
+              >
+                <input
+                  type="date"
+                  name="dueDate"
+                  defaultValue={dueValue}
+                  className={inputClass}
+                />
+                <button className="shrink-0 rounded-lg bg-teal-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-teal-400">
+                  OK
+                </button>
+              </form>
+            ) : (
+              <p className="text-sm">
+                {dueValue ? card.dueDate?.toLocaleDateString("pt-BR") : "—"}
+              </p>
+            )}
+          </section>
+
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Atividade
+            </h3>
+            <ul className="space-y-2 text-xs text-slate-400">
+              {activities.map((a) => (
+                <li key={a.id}>
+                  <span className="text-slate-300">{a.actor?.name ?? "Alguém"}</span>{" "}
+                  {activityText(a.type, a.payload)}
+                  <span className="block text-slate-600">{fmt(a.createdAt)}</span>
+                </li>
+              ))}
+              {activities.length === 0 && <li>Sem atividade.</li>}
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </main>
+  );
+}

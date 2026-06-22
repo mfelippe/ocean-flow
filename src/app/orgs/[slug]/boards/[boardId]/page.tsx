@@ -21,7 +21,11 @@ export default async function BoardPage({
     where: { boardId },
     orderBy: { rank: "asc" },
     include: {
-      cards: { where: { archivedAt: null }, orderBy: { rank: "asc" } },
+      cards: {
+        where: { archivedAt: null },
+        orderBy: { rank: "asc" },
+        include: { labels: { include: { label: true } } },
+      },
     },
   });
 
@@ -34,6 +38,12 @@ export default async function BoardPage({
       title: card.title,
       description: card.description,
       rank: card.rank,
+      dueDate: card.dueDate ? card.dueDate.toISOString() : null,
+      labels: card.labels.map((cl) => ({
+        id: cl.label.id,
+        name: cl.label.name,
+        color: cl.label.color,
+      })),
     })),
   }));
 
@@ -84,6 +94,7 @@ export default async function BoardPage({
         initialColumns={initialColumns}
         canWrite={canWrite}
         boardId={boardId}
+        slug={slug}
       />
     </main>
   );

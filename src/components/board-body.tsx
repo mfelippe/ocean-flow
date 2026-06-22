@@ -26,6 +26,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import Link from "next/link";
 import { generateKeyBetween } from "fractional-indexing";
 import {
   archiveCard,
@@ -35,15 +36,17 @@ import {
   moveCardTo,
   moveColumn,
   renameColumn,
-  updateCard,
 } from "@/app/actions/boards";
 import { inputClass } from "@/components/form";
 
+export type LabelT = { id: string; name: string; color: string };
 export type CardT = {
   id: string;
   title: string;
   description: string | null;
   rank: string;
+  dueDate: string | null;
+  labels: LabelT[];
 };
 export type ColumnT = {
   id: string;
@@ -60,7 +63,12 @@ function signature(columns: ColumnT[]): string {
     .map(
       (c) =>
         `${c.id}:${c.name}:${c.rank}|${c.cards
-          .map((card) => `${card.id}:${card.rank}:${card.title}:${card.description ?? ""}`)
+          .map(
+            (card) =>
+              `${card.id}:${card.rank}:${card.title}:${card.description ?? ""}:${
+                card.dueDate ?? ""
+              }:${card.labels.map((l) => l.id).join("+")}`,
+          )
           .join(",")}`,
     )
     .join(";");
@@ -70,10 +78,12 @@ export function BoardBody({
   initialColumns,
   canWrite,
   boardId,
+  slug,
 }: {
   initialColumns: ColumnT[];
   canWrite: boolean;
   boardId: string;
+  slug: string;
 }) {
   const router = useRouter();
   const [columns, setColumns] = useState<ColumnT[]>(initialColumns);
@@ -242,6 +252,8 @@ export function BoardBody({
             colIndex={colIndex}
             total={columns.length}
             canWrite={canWrite}
+            slug={slug}
+            boardId={boardId}
           />
         ))}
 
@@ -276,11 +288,15 @@ function ColumnView({
   colIndex,
   total,
   canWrite,
+  slug,
+  boardId,
 }: {
   column: ColumnT;
   colIndex: number;
   total: number;
   canWrite: boolean;
+  slug: string;
+  boardId: string;
 }) {
   // A coluna inteira é uma zona de drop (inclusive quando vazia).
   const { setNodeRef, isOver } = useDroppable({
@@ -345,7 +361,12 @@ function ColumnView({
           }`}
         >
           {column.cards.map((card) => (
-            <SortableCard key={card.id} card={card} canWrite={canWrite} />
+            <SortableCard
+              key={card.id}
+              card={card}
+              canWrite={canWrite}
+              href={`/orgs/${slug}/boards/${boardId}/cards/${card.id}`}
+            />
           ))}
           {column.cards.length === 0 && (
             <p className="px-1 py-6 text-center text-xs text-slate-600">
@@ -372,7 +393,21 @@ function ColumnView({
   );
 }
 
-function SortableCard({ card, canWrite }: { card: CardT; canWrite: boolean }) {
+function dueLabel(iso: string): { text: string; overdue: boolean } {
+  const d = new Date(iso);
+  const text = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return { text, overdue: d.getTime() < Date.now() };
+}
+
+function SortableCard({
+  card,
+  canWrite,
+  href,
+}: {
+  card: CardT;
+  canWrite: boolean;
+  href: string;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: card.id, data: { type: "card" } });
 
@@ -381,6 +416,8 @@ function SortableCard({ card, canWrite }: { card: CardT; canWrite: boolean }) {
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
+
+  const due = card.dueDate ? dueLabel(card.dueDate) : null;
 
   return (
     <article
@@ -392,43 +429,48 @@ function SortableCard({ card, canWrite }: { card: CardT; canWrite: boolean }) {
         {...(canWrite ? { ...attributes, ...listeners } : {})}
         className={canWrite ? "cursor-grab touch-none active:cursor-grabbing" : ""}
       >
+        {card.labels.length > 0 && (
+          <div className="mb-1.5 flex flex-wrap gap-1">
+            {card.labels.map((l) => (
+              <span
+                key={l.id}
+                className="rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
+                style={{ backgroundColor: l.color }}
+              >
+                {l.name}
+              </span>
+            ))}
+          </div>
+        )}
         <p className="text-sm">{card.title}</p>
         {card.description && (
-          <p className="mt-1 line-clamp-3 text-xs text-slate-400">
+          <p className="mt-1 line-clamp-2 text-xs text-slate-400">
             {card.description}
           </p>
         )}
+        {due && (
+          <span
+            className={`mt-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] ${
+              due.overdue
+                ? "bg-red-500/20 text-red-300"
+                : "bg-slate-700 text-slate-300"
+            }`}
+          >
+            📅 {due.text}
+          </span>
+        )}
       </div>
 
-      {canWrite && (
-        <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-slate-700/60 pt-2">
-          <details className="group relative">
-            <summary className={`${iconBtn} list-none`}>✎</summary>
-            <form
-              action={updateCard.bind(null, card.id)}
-              className="absolute right-0 z-20 mt-1 w-60 space-y-2 rounded-lg border border-slate-700 bg-slate-900 p-2"
-            >
-              <input
-                name="title"
-                defaultValue={card.title}
-                required
-                className={inputClass}
-              />
-              <textarea
-                name="description"
-                defaultValue={card.description ?? ""}
-                rows={3}
-                placeholder="Descrição"
-                className={inputClass}
-              />
-              <button className={iconBtn}>Salvar</button>
-            </form>
-          </details>
+      <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-slate-700/60 pt-2">
+        <Link href={href} className={iconBtn}>
+          abrir
+        </Link>
+        {canWrite && (
           <form action={archiveCard.bind(null, card.id)}>
             <button className={`${iconBtn} hover:text-red-400`}>🗑</button>
           </form>
-        </div>
-      )}
+        )}
+      </div>
     </article>
   );
 }
