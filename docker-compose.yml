@@ -27,8 +27,12 @@ services:
       AUTH_SECRET: "troque-este-valor-em-producao"
       AUTH_URL: "http://localhost:3000"
       NODE_ENV: "production"
+      UPLOAD_DIR: "/data/uploads"
     ports:
       - "3000:3000"
+    volumes:
+      - oceanflow_uploads:/data/uploads
 
 volumes:
   oceanflow_db:
+  oceanflow_uploads:

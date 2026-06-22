@@ -31,6 +31,10 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
+# Diretório de anexos (montado como volume em produção).
+RUN mkdir -p /data/uploads && chown -R nextjs:nodejs /data
+ENV UPLOAD_DIR=/data/uploads
+
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME=0.0.0.0

@@ -47,6 +47,7 @@ export type CardT = {
   rank: string;
   dueDate: string | null;
   labels: LabelT[];
+  attachmentCount: number;
 };
 export type ColumnT = {
   id: string;
@@ -448,16 +449,25 @@ function SortableCard({
             {card.description}
           </p>
         )}
-        {due && (
-          <span
-            className={`mt-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] ${
-              due.overdue
-                ? "bg-red-500/20 text-red-300"
-                : "bg-slate-700 text-slate-300"
-            }`}
-          >
-            📅 {due.text}
-          </span>
+        {(due || card.attachmentCount > 0) && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {due && (
+              <span
+                className={`inline-block rounded px-1.5 py-0.5 text-[10px] ${
+                  due.overdue
+                    ? "bg-red-500/20 text-red-300"
+                    : "bg-slate-700 text-slate-300"
+                }`}
+              >
+                📅 {due.text}
+              </span>
+            )}
+            {card.attachmentCount > 0 && (
+              <span className="text-[10px] text-slate-400">
+                📎 {card.attachmentCount}
+              </span>
+            )}
+          </div>
         )}
       </div>
 

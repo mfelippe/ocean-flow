@@ -10,9 +10,14 @@ import {
   toggleCardLabel,
   updateCardContent,
 } from "@/app/actions/cards";
+import {
+  deleteAttachment,
+  uploadAttachment,
+} from "@/app/actions/attachments";
 import { CardContent } from "@/components/card-content";
 import { AddCommentForm } from "@/components/add-comment-form";
 import { CreateLabelForm } from "@/components/create-label-form";
+import { AttachmentForm } from "@/components/attachment-form";
 import { inputClass } from "@/components/form";
 
 function activityText(type: string, payload: unknown): string {
@@ -28,9 +33,17 @@ function activityText(type: string, payload: unknown): string {
       return "arquivou o card";
     case "COMMENT_ADDED":
       return "comentou";
+    case "ATTACHMENT_ADDED":
+      return `anexou "${p.name}"`;
     default:
       return type;
   }
+}
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function fmt(d: Date): string {
@@ -55,6 +68,7 @@ export default async function CardPage({
       column: true,
       labels: { include: { label: true } },
       comments: { include: { author: true }, orderBy: { createdAt: "desc" } },
+      attachments: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!card || card.column.boardId !== boardId) notFound();
@@ -88,6 +102,47 @@ export default async function CardPage({
             canWrite={canWrite}
             action={updateCardContent.bind(null, cardId)}
           />
+
+          <section>
+            <h2 className="mb-3 text-sm font-semibold text-slate-300">
+              Anexos ({card.attachments.length})
+            </h2>
+            {canWrite && (
+              <div className="mb-4">
+                <AttachmentForm action={uploadAttachment.bind(null, cardId)} />
+              </div>
+            )}
+            <ul className="space-y-2">
+              {card.attachments.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2"
+                >
+                  <a
+                    href={`/api/attachments/${a.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 flex-1 truncate text-sm text-teal-400 hover:underline"
+                  >
+                    📎 {a.fileName}
+                  </a>
+                  <span className="shrink-0 text-xs text-slate-500">
+                    {fmtSize(a.size)}
+                  </span>
+                  {canWrite && (
+                    <form action={deleteAttachment.bind(null, a.id)}>
+                      <button className="text-xs text-slate-600 hover:text-red-400">
+                        remover
+                      </button>
+                    </form>
+                  )}
+                </li>
+              ))}
+              {card.attachments.length === 0 && (
+                <li className="text-sm text-slate-500">Nenhum anexo.</li>
+              )}
+            </ul>
+          </section>
 
           <section>
             <h2 className="mb-3 text-sm font-semibold text-slate-300">

@@ -13,6 +13,9 @@ next-env.d.ts
 # prisma
 /src/generated/
 
+# anexos (uploads em disco)
+/uploads
+
 # ambiente
 .env
 .env*.local

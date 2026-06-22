@@ -24,7 +24,10 @@ export default async function BoardPage({
       cards: {
         where: { archivedAt: null },
         orderBy: { rank: "asc" },
-        include: { labels: { include: { label: true } } },
+        include: {
+          labels: { include: { label: true } },
+          _count: { select: { attachments: true } },
+        },
       },
     },
   });
@@ -44,6 +47,7 @@ export default async function BoardPage({
         name: cl.label.name,
         color: cl.label.color,
       })),
+      attachmentCount: card._count.attachments,
     })),
   }));
 
