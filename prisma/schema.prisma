@@ -53,6 +53,20 @@ model Organization {
 
   memberships Membership[]
   boards      Board[]
+  webhooks    Webhook[]
+}
+
+model Webhook {
+  id             String   @id @default(cuid())
+  organizationId String
+  url            String
+  secret         String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model Membership {

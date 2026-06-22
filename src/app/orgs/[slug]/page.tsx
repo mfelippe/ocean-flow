@@ -4,8 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { addMember } from "@/app/actions/organizations";
 import { createBoard } from "@/app/actions/boards";
+import {
+  createWebhook,
+  deleteWebhook,
+  toggleWebhook,
+} from "@/app/actions/webhooks";
 import { AddMemberForm } from "@/components/add-member-form";
 import { CreateBoardForm } from "@/components/create-board-form";
+import { CreateWebhookForm } from "@/components/create-webhook-form";
+import { ConfirmButton } from "@/components/confirm-button";
 import { UserMenu } from "@/components/user-menu";
 
 export default async function OrganizationPage({
@@ -40,8 +47,16 @@ export default async function OrganizationPage({
     orderBy: { createdAt: "asc" },
   });
 
+  const webhooks = canManage
+    ? await prisma.webhook.findMany({
+        where: { organizationId: org.id },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+
   const boundAddMember = addMember.bind(null, org.id, org.slug);
   const boundCreateBoard = createBoard.bind(null, org.id, org.slug);
+  const boundCreateWebhook = createWebhook.bind(null, org.id);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -86,7 +101,7 @@ export default async function OrganizationPage({
         <h2 className="mb-3 text-sm font-semibold text-ink">
           Membros ({org.memberships.length})
         </h2>
-        <ul className="divide-y divide-slate-800 overflow-hidden rounded-xl border border-edge">
+        <ul className="divide-y divide-edge overflow-hidden rounded-xl border border-edge">
           {org.memberships.map((m) => (
             <li
               key={m.id}
@@ -110,6 +125,64 @@ export default async function OrganizationPage({
             Adicionar membro
           </h2>
           <AddMemberForm action={boundAddMember} />
+        </section>
+      )}
+
+      {canManage && (
+        <section className="mt-8">
+          <h2 className="mb-1 text-sm font-semibold text-ink">
+            Webhooks ({webhooks.length})
+          </h2>
+          <p className="mb-3 text-xs text-muted">
+            Notificam uma URL externa a cada evento (card criado/movido,
+            comentário, anexo). O payload é assinado em{" "}
+            <code className="rounded bg-edge px-1">X-OceanFlow-Signature</code>.
+          </p>
+
+          {webhooks.length > 0 && (
+            <ul className="mb-4 space-y-2">
+              {webhooks.map((w) => (
+                <li
+                  key={w.id}
+                  className="rounded-xl border border-edge bg-panel/60 p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {w.url}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        w.active
+                          ? "bg-brand/15 text-brand"
+                          : "bg-edge text-muted"
+                      }`}
+                    >
+                      {w.active ? "ativo" : "inativo"}
+                    </span>
+                    <form action={toggleWebhook.bind(null, w.id)}>
+                      <button className="shrink-0 text-xs text-muted hover:text-brand">
+                        {w.active ? "desativar" : "ativar"}
+                      </button>
+                    </form>
+                    <ConfirmButton
+                      action={deleteWebhook.bind(null, w.id)}
+                      triggerClassName="shrink-0 text-xs text-subtle hover:text-red-400"
+                      title="Remover webhook?"
+                      description="A URL deixará de receber eventos. Esta ação não pode ser desfeita."
+                      confirmLabel="Remover"
+                    >
+                      remover
+                    </ConfirmButton>
+                  </div>
+                  <p className="mt-1 truncate text-[11px] text-subtle">
+                    secret: <code>{w.secret}</code>
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <CreateWebhookForm action={boundCreateWebhook} />
         </section>
       )}
     </main>

@@ -44,6 +44,10 @@ export const commentSchema = z.object({
   body: z.string().trim().min(1, "Escreva um comentário.").max(5000),
 });
 
+export const webhookSchema = z.object({
+  url: z.url("Informe uma URL válida (https://…)."),
+});
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Informe a senha atual."),

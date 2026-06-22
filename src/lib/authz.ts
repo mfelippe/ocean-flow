@@ -38,6 +38,19 @@ export async function requireBoardWrite(boardId: string) {
   return ctx;
 }
 
+/** Exige que o usuário seja OWNER ou ADMIN da organização (ações administrativas). */
+export async function requireOrgAdmin(orgId: string) {
+  const user = await requireUser();
+  const membership = await prisma.membership.findUnique({
+    where: { userId_organizationId: { userId: user.id, organizationId: orgId } },
+  });
+  if (!membership) notFound();
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") {
+    throw new Error("Apenas OWNER/ADMIN podem realizar esta ação.");
+  }
+  return { user, membership };
+}
+
 /** Exige que o usuário seja membro com escrita (não-VIEWER) na organização. */
 export async function requireOrgWrite(orgId: string) {
   const user = await requireUser();
