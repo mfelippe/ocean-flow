@@ -35,8 +35,20 @@ export default async function OrganizationPage({
     myMembership.role === "OWNER" || myMembership.role === "ADMIN";
   const canWrite = myMembership.role !== "VIEWER";
 
+  // Quadros privados só aparecem para admins da org ou membros do quadro.
   const boards = await prisma.board.findMany({
-    where: { organizationId: org.id, archivedAt: null },
+    where: {
+      organizationId: org.id,
+      archivedAt: null,
+      ...(canManage
+        ? {}
+        : {
+            OR: [
+              { visibility: "ORG" },
+              { members: { some: { userId: user.id } } },
+            ],
+          }),
+    },
     orderBy: { createdAt: "asc" },
   });
 

@@ -20,6 +20,11 @@ export const addMemberSchema = z.object({
   role: z.enum(["ADMIN", "MEMBER", "VIEWER"]),
 });
 
+export const boardMemberSchema = z.object({
+  email: z.email("E-mail inválido.").toLowerCase(),
+  role: z.enum(["ADMIN", "MEMBER", "VIEWER"]),
+});
+
 export const boardSchema = z.object({
   name: z.string().trim().min(2, "Informe o nome do quadro."),
 });

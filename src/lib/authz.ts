@@ -2,10 +2,14 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
+export type EffectiveRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
+
 /**
- * Carrega um board garantindo que o usuário autenticado é membro da
- * organização dona. Retorna o board (com slug da org) e o papel do usuário.
- * Não-membros recebem 404 (não revelamos a existência do board).
+ * Carrega um board e calcula o PAPEL EFETIVO do usuário nele:
+ * - OWNER/ADMIN da org: acesso total a qualquer quadro.
+ * - Demais: em quadro ORG, o papel do quadro sobrepõe o da org (se houver);
+ *   em quadro PRIVATE, exige ser membro do quadro (senão 404).
+ * Retorna o board (com slug da org), o papel da org e o papel efetivo.
  */
 export async function getBoardContext(boardId: string) {
   const user = await requireUser();
@@ -16,7 +20,7 @@ export async function getBoardContext(boardId: string) {
   });
   if (!board) notFound();
 
-  const membership = await prisma.membership.findUnique({
+  const orgMembership = await prisma.membership.findUnique({
     where: {
       userId_organizationId: {
         userId: user.id,
@@ -24,9 +28,25 @@ export async function getBoardContext(boardId: string) {
       },
     },
   });
-  if (!membership) notFound();
+  if (!orgMembership) notFound();
+  const orgRole = orgMembership.role;
 
-  return { user, board, role: membership.role };
+  let role: EffectiveRole;
+  if (orgRole === "OWNER" || orgRole === "ADMIN") {
+    role = orgRole;
+  } else {
+    const boardMembership = await prisma.boardMembership.findUnique({
+      where: { boardId_userId: { boardId: board.id, userId: user.id } },
+    });
+    if (board.visibility === "PRIVATE") {
+      if (!boardMembership) notFound();
+      role = boardMembership.role;
+    } else {
+      role = boardMembership?.role ?? orgRole;
+    }
+  }
+
+  return { user, board, orgRole, role };
 }
 
 /** Igual a getBoardContext, mas exige permissão de escrita (não-VIEWER). */
@@ -34,6 +54,16 @@ export async function requireBoardWrite(boardId: string) {
   const ctx = await getBoardContext(boardId);
   if (ctx.role === "VIEWER") {
     throw new Error("Sem permissão de escrita neste quadro.");
+  }
+  return ctx;
+}
+
+/** Exige papel de administração do quadro (OWNER/ADMIN efetivo). Não-admins
+ *  recebem 404 (a página de acesso não deve ser revelada). */
+export async function requireBoardManage(boardId: string) {
+  const ctx = await getBoardContext(boardId);
+  if (ctx.role !== "OWNER" && ctx.role !== "ADMIN") {
+    notFound();
   }
   return ctx;
 }

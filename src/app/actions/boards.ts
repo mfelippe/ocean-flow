@@ -22,13 +22,18 @@ export async function createBoard(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireOrgWrite(orgId);
+  const { user } = await requireOrgWrite(orgId);
   const parsed = boardSchema.safeParse({ name: formData.get("name") });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  // Quem cria vira ADMIN do quadro (mantém acesso mesmo se virar PRIVATE).
   const board = await prisma.board.create({
-    data: { organizationId: orgId, name: parsed.data.name },
+    data: {
+      organizationId: orgId,
+      name: parsed.data.name,
+      members: { create: { userId: user.id, role: "ADMIN" } },
+    },
   });
   redirect(boardPath(slug, board.id));
 }

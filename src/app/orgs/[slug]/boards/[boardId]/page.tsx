@@ -18,6 +18,7 @@ export default async function BoardPage({
   if (board.organization.slug !== slug || board.archivedAt) notFound();
 
   const canWrite = role !== "VIEWER";
+  const canManage = role === "OWNER" || role === "ADMIN";
 
   const columns = await prisma.column.findMany({
     where: { boardId },
@@ -88,6 +89,14 @@ export default async function BoardPage({
           )}
         </div>
         <div className="flex items-center gap-4">
+          {canManage && (
+            <Link
+              href={`/orgs/${slug}/boards/${boardId}/settings`}
+              className="text-xs text-muted hover:text-brand"
+            >
+              Acesso
+            </Link>
+          )}
           {canWrite && (
             <ConfirmButton
               action={archiveBoard.bind(null, boardId)}

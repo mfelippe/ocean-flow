@@ -19,6 +19,17 @@ enum Role {
   VIEWER
 }
 
+enum BoardRole {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum BoardVisibility {
+  ORG
+  PRIVATE
+}
+
 enum ActivityType {
   CARD_CREATED
   CARD_MOVED
@@ -38,10 +49,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships  Membership[]
-  createdCards Card[]       @relation("CardCreatedBy")
-  comments     Comment[]
-  activities   Activity[]   @relation("ActivityActor")
+  memberships      Membership[]
+  boardMemberships BoardMembership[]
+  createdCards     Card[]       @relation("CardCreatedBy")
+  comments         Comment[]
+  activities       Activity[]   @relation("ActivityActor")
 }
 
 model Organization {
@@ -100,21 +112,37 @@ model Membership {
 }
 
 model Board {
-  id             String    @id @default(cuid())
+  id             String          @id @default(cuid())
   organizationId String
   name           String
   description    String?
   color          String?
+  visibility     BoardVisibility @default(ORG)
   archivedAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   columns      Column[]
   labels       Label[]
   activities   Activity[]
+  members      BoardMembership[]
 
   @@index([organizationId])
+}
+
+model BoardMembership {
+  id        String    @id @default(cuid())
+  boardId   String
+  userId    String
+  role      BoardRole @default(MEMBER)
+  createdAt DateTime  @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, userId])
+  @@index([userId])
 }
 
 model Column {
