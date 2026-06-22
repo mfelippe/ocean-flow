@@ -1,0 +1,26 @@
+# Caddyfile.example — copie para /etc/caddy/Caddyfile no VPS
+# Caddy emite e renova SSL automaticamente via Let's Encrypt.
+
+kanban.seu-dominio.com {
+  # Repassa para o container Ocean Flow na porta 3000
+  reverse_proxy localhost:3000
+
+  # Compressão gzip/zstd
+  encode gzip zstd
+
+  # Logs estruturados
+  log {
+    output file /var/log/caddy/ocean-flow.log {
+      roll_size 10mb
+      roll_keep 5
+    }
+  }
+
+  # Cabeçalhos de segurança
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "SAMEORIGIN"
+    Referrer-Policy "strict-origin-when-cross-origin"
+  }
+}
