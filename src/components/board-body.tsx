@@ -7,16 +7,20 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
-  closestCorners,
+  closestCenter,
+  getFirstCollision,
+  pointerWithin,
+  rectIntersection,
+  useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -98,6 +102,30 @@ export function BoardBody({
     );
   }
 
+  // Detecção de colisão para múltiplas colunas: prioriza o que está sob o
+  // ponteiro; se cair sobre uma coluna, escolhe o card mais próximo dentro dela.
+  const collisionDetection: CollisionDetection = (args) => {
+    const pointer = pointerWithin(args);
+    const intersections = pointer.length > 0 ? pointer : rectIntersection(args);
+    let overId = getFirstCollision(intersections, "id");
+
+    if (overId != null) {
+      const overColumn = columnsRef.current.find((c) => c.id === overId);
+      if (overColumn && overColumn.cards.length > 0) {
+        const cardIds = new Set(overColumn.cards.map((c) => c.id));
+        const closest = closestCenter({
+          ...args,
+          droppableContainers: args.droppableContainers.filter(
+            (c) => c.id !== overId && cardIds.has(String(c.id)),
+          ),
+        });
+        if (closest.length > 0) overId = closest[0].id;
+      }
+      return [{ id: overId }];
+    }
+    return [];
+  };
+
   function handleDragStart(event: DragStartEvent) {
     const id = String(event.active.id);
     const col = findColumn(id);
@@ -148,47 +176,46 @@ export function BoardBody({
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    const activeCol = findColumn(activeId);
-    const overCol = findColumn(overId);
-    if (!activeCol || !overCol) return;
+    const cols = columnsRef.current;
 
-    let base = columnsRef.current;
+    // Coluna de destino = onde o "over" está (estável, independe do
+    // estado intermediário que o handleDragOver tenha aplicado).
+    const targetCol =
+      cols.find((c) => c.id === overId) ??
+      cols.find((c) => c.cards.some((card) => card.id === overId));
+    if (!targetCol) return;
 
-    // Reordenação dentro da mesma coluna.
-    if (activeCol.id === overCol.id && activeId !== overId) {
-      const col = base.find((c) => c.id === activeCol.id);
-      if (col) {
-        const oldIndex = col.cards.findIndex((c) => c.id === activeId);
-        const newIndex = col.cards.findIndex((c) => c.id === overId);
-        if (oldIndex !== -1 && newIndex !== -1) {
-          base = base.map((c) =>
-            c.id === col.id
-              ? { ...c, cards: arrayMove(c.cards, oldIndex, newIndex) }
-              : c,
-          );
-        }
-      }
+    // Cards do destino sem o card ativo, para calcular vizinhos/posição.
+    const others = targetCol.cards.filter((c) => c.id !== activeId);
+    let insertAt: number;
+    if (overId === targetCol.id) {
+      insertAt = others.length; // soltou na área vazia da coluna
+    } else {
+      const overIdx = others.findIndex((c) => c.id === overId);
+      insertAt = overIdx >= 0 ? overIdx : others.length;
     }
 
-    // Coluna final onde o card está agora + rank entre os vizinhos.
-    const targetCol = base.find((c) => c.cards.some((card) => card.id === activeId));
-    if (!targetCol) return;
-    const idx = targetCol.cards.findIndex((c) => c.id === activeId);
-    const before = targetCol.cards[idx - 1]?.rank ?? null;
-    const after = targetCol.cards[idx + 1]?.rank ?? null;
+    const before = others[insertAt - 1]?.rank ?? null;
+    const after = others[insertAt]?.rank ?? null;
     const newRank = generateKeyBetween(before, after);
 
-    const finalColumns = base.map((c) =>
-      c.id === targetCol.id
-        ? {
-            ...c,
-            cards: c.cards.map((card) =>
-              card.id === activeId ? { ...card, rank: newRank } : card,
-            ),
-          }
-        : c,
-    );
-    setColumns(finalColumns);
+    // Estado otimista final: remove o ativo de onde estiver e o insere
+    // na coluna de destino na posição calculada.
+    setColumns((prev) => {
+      let moved: CardT | undefined;
+      const removed = prev.map((c) => {
+        const found = c.cards.find((x) => x.id === activeId);
+        if (found) moved = { ...found, rank: newRank };
+        return { ...c, cards: c.cards.filter((x) => x.id !== activeId) };
+      });
+      if (!moved) return prev;
+      return removed.map((c) => {
+        if (c.id !== targetCol.id) return c;
+        const next = [...c.cards];
+        next.splice(insertAt, 0, moved!);
+        return { ...c, cards: next };
+      });
+    });
 
     startTransition(async () => {
       try {
@@ -202,7 +229,7 @@ export function BoardBody({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
@@ -255,6 +282,12 @@ function ColumnView({
   total: number;
   canWrite: boolean;
 }) {
+  // A coluna inteira é uma zona de drop (inclusive quando vazia).
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+    data: { type: "column" },
+  });
+
   return (
     <section className="flex max-h-full w-72 shrink-0 flex-col rounded-xl border border-slate-800 bg-slate-900/40">
       <div className="flex items-center justify-between gap-2 border-b border-slate-800 px-3 py-2">
@@ -306,14 +339,16 @@ function ColumnView({
         strategy={verticalListSortingStrategy}
       >
         <div
-          className="flex-1 space-y-2 overflow-y-auto p-2"
-          data-column-id={column.id}
+          ref={setNodeRef}
+          className={`flex-1 space-y-2 overflow-y-auto p-2 ${
+            isOver ? "bg-teal-500/5" : ""
+          }`}
         >
           {column.cards.map((card) => (
             <SortableCard key={card.id} card={card} canWrite={canWrite} />
           ))}
           {column.cards.length === 0 && (
-            <p className="px-1 py-4 text-center text-xs text-slate-600">
+            <p className="px-1 py-6 text-center text-xs text-slate-600">
               Solte cards aqui
             </p>
           )}
@@ -339,7 +374,7 @@ function ColumnView({
 
 function SortableCard({ card, canWrite }: { card: CardT; canWrite: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: card.id });
+    useSortable({ id: card.id, data: { type: "card" } });
 
   const style = {
     transform: CSS.Transform.toString(transform),
