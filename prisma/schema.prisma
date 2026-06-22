@@ -54,6 +54,21 @@ model Organization {
   memberships Membership[]
   boards      Board[]
   webhooks    Webhook[]
+  apiTokens   ApiToken[]
+}
+
+model ApiToken {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  tokenHash      String    @unique
+  prefix         String
+  createdAt      DateTime  @default(now())
+  lastUsedAt     DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model Webhook {

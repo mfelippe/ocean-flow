@@ -48,6 +48,10 @@ export const webhookSchema = z.object({
   url: z.url("Informe uma URL válida (https://…)."),
 });
 
+export const apiTokenSchema = z.object({
+  name: z.string().trim().min(1, "Dê um nome ao token.").max(60),
+});
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Informe a senha atual."),

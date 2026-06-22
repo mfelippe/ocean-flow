@@ -9,9 +9,11 @@ import {
   deleteWebhook,
   toggleWebhook,
 } from "@/app/actions/webhooks";
+import { createApiToken, revokeApiToken } from "@/app/actions/api-tokens";
 import { AddMemberForm } from "@/components/add-member-form";
 import { CreateBoardForm } from "@/components/create-board-form";
 import { CreateWebhookForm } from "@/components/create-webhook-form";
+import { CreateTokenForm } from "@/components/create-token-form";
 import { ConfirmButton } from "@/components/confirm-button";
 import { UserMenu } from "@/components/user-menu";
 import { eventLabel } from "@/lib/events";
@@ -55,9 +57,17 @@ export default async function OrganizationPage({
       })
     : [];
 
+  const apiTokens = canManage
+    ? await prisma.apiToken.findMany({
+        where: { organizationId: org.id },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+
   const boundAddMember = addMember.bind(null, org.id, org.slug);
   const boundCreateBoard = createBoard.bind(null, org.id, org.slug);
   const boundCreateWebhook = createWebhook.bind(null, org.id);
+  const boundCreateToken = createApiToken.bind(null, org.id);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -190,6 +200,54 @@ export default async function OrganizationPage({
           )}
 
           <CreateWebhookForm action={boundCreateWebhook} />
+        </section>
+      )}
+
+      {canManage && (
+        <section className="mt-8">
+          <h2 className="mb-1 text-sm font-semibold text-ink">
+            Tokens de API ({apiTokens.length})
+          </h2>
+          <p className="mb-3 text-xs text-muted">
+            Acesso programático à API REST em{" "}
+            <code className="rounded bg-edge px-1">/api/v1</code> com o header{" "}
+            <code className="rounded bg-edge px-1">
+              Authorization: Bearer &lt;token&gt;
+            </code>
+            . O token dá acesso a esta organização.
+          </p>
+
+          {apiTokens.length > 0 && (
+            <ul className="mb-4 space-y-2">
+              {apiTokens.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-edge bg-panel/60 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm">{t.name}</p>
+                    <p className="text-[11px] text-subtle">
+                      <code>{t.prefix}…</code> ·{" "}
+                      {t.lastUsedAt
+                        ? `usado em ${t.lastUsedAt.toLocaleDateString("pt-BR")}`
+                        : "nunca usado"}
+                    </p>
+                  </div>
+                  <ConfirmButton
+                    action={revokeApiToken.bind(null, t.id)}
+                    triggerClassName="shrink-0 text-xs text-subtle hover:text-red-400"
+                    title="Revogar token?"
+                    description="Aplicações que usam este token perderão o acesso imediatamente."
+                    confirmLabel="Revogar"
+                  >
+                    revogar
+                  </ConfirmButton>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <CreateTokenForm action={boundCreateToken} />
         </section>
       )}
     </main>
