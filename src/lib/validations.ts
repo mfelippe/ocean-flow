@@ -52,6 +52,14 @@ export const apiTokenSchema = z.object({
   name: z.string().trim().min(1, "Dê um nome ao token.").max(60),
 });
 
+// Atualização parcial de card pela API pública (todos os campos opcionais).
+export const apiCardUpdateSchema = z.object({
+  title: z.string().trim().min(1, "Título não pode ser vazio.").max(500).optional(),
+  description: z.string().max(5000).nullable().optional(),
+  dueDate: z.string().nullable().optional(),
+  columnId: z.string().min(1).optional(),
+});
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Informe a senha atual."),
