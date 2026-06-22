@@ -59,6 +59,15 @@ export type ColumnT = {
 const iconBtn =
   "rounded px-1.5 py-0.5 text-xs text-slate-400 hover:bg-slate-700 hover:text-slate-100 disabled:opacity-30";
 
+/** Filtro de texto do quadro: casa por título e descrição (case-insensitive). */
+function cardMatches(card: CardT, q: string): boolean {
+  if (!q) return true;
+  return (
+    card.title.toLowerCase().includes(q) ||
+    (card.description ?? "").toLowerCase().includes(q)
+  );
+}
+
 function signature(columns: ColumnT[]): string {
   return columns
     .map(
@@ -92,6 +101,14 @@ export function BoardBody({
   columnsRef.current = columns;
   const [activeCard, setActiveCard] = useState<CardT | null>(null);
   const [, startTransition] = useTransition();
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const matchCount = q
+    ? columns.reduce(
+        (n, c) => n + c.cards.filter((card) => cardMatches(card, q)).length,
+        0,
+      )
+    : null;
 
   // Re-sincroniza com o servidor quando os dados mudam (criar/editar/arquivar).
   const initialSig = signature(initialColumns);
@@ -245,6 +262,21 @@ export function BoardBody({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
+      <div className="flex items-center gap-3 border-b border-slate-800 px-6 py-2">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar cards…"
+          className="w-72 max-w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-sm outline-none placeholder:text-slate-500 focus:border-teal-400"
+        />
+        {matchCount !== null && (
+          <span className="text-xs text-slate-500">
+            {matchCount} resultado{matchCount === 1 ? "" : "s"}
+          </span>
+        )}
+      </div>
+
       <div className="flex flex-1 gap-4 overflow-x-auto p-6">
         {columns.map((column, colIndex) => (
           <ColumnView
@@ -255,6 +287,7 @@ export function BoardBody({
             canWrite={canWrite}
             slug={slug}
             boardId={boardId}
+            query={q}
           />
         ))}
 
@@ -291,6 +324,7 @@ function ColumnView({
   canWrite,
   slug,
   boardId,
+  query,
 }: {
   column: ColumnT;
   colIndex: number;
@@ -298,7 +332,11 @@ function ColumnView({
   canWrite: boolean;
   slug: string;
   boardId: string;
+  query: string;
 }) {
+  const visibleCards = query
+    ? column.cards.filter((c) => cardMatches(c, query))
+    : column.cards;
   // A coluna inteira é uma zona de drop (inclusive quando vazia).
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -330,7 +368,7 @@ function ColumnView({
           <span className="truncate text-sm font-semibold">{column.name}</span>
         )}
         <span className="shrink-0 text-xs text-slate-500">
-          {column.cards.length}
+          {query ? `${visibleCards.length}/${column.cards.length}` : column.cards.length}
         </span>
         {canWrite && (
           <div className="flex shrink-0 items-center">
@@ -352,7 +390,7 @@ function ColumnView({
       </div>
 
       <SortableContext
-        items={column.cards.map((c) => c.id)}
+        items={visibleCards.map((c) => c.id)}
         strategy={verticalListSortingStrategy}
       >
         <div
@@ -361,7 +399,7 @@ function ColumnView({
             isOver ? "bg-teal-500/5" : ""
           }`}
         >
-          {column.cards.map((card) => (
+          {visibleCards.map((card) => (
             <SortableCard
               key={card.id}
               card={card}
@@ -369,9 +407,9 @@ function ColumnView({
               href={`/orgs/${slug}/boards/${boardId}/cards/${card.id}`}
             />
           ))}
-          {column.cards.length === 0 && (
+          {visibleCards.length === 0 && (
             <p className="px-1 py-6 text-center text-xs text-slate-600">
-              Solte cards aqui
+              {query ? "Nenhum card corresponde" : "Solte cards aqui"}
             </p>
           )}
         </div>
@@ -435,11 +473,11 @@ function SortableCard({
             {card.labels.map((l) => (
               <span
                 key={l.id}
-                className="rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
+                title={l.name}
+                aria-label={l.name}
+                className="h-1.5 w-9 rounded-full"
                 style={{ backgroundColor: l.color }}
-              >
-                {l.name}
-              </span>
+              />
             ))}
           </div>
         )}
