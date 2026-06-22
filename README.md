@@ -1,33 +1,106 @@
 # Ocean Flow
 
-O Ocean Flow é uma plataforma open source de gerenciamento de projetos e fluxos de trabalho inspirada na metodologia Kanban.
+Plataforma **open source** e **self-hosted** de Kanban e fluxos de trabalho —
+no espírito do Uptime Kuma: suba a sua própria instância com um comando, sem
+depender de ferramentas proprietárias.
 
-O objetivo do projeto é oferecer uma solução self-hosted para equipes e empresas que desejam organizar tarefas, acompanhar entregas e automatizar processos sem depender de ferramentas proprietárias.
+> 🚧 Em desenvolvimento ativo. Já é utilizável: organizações, quadros com
+> arrastar-e-soltar, cards ricos, permissões, e integrações (API REST, MCP e
+> webhooks).
 
-## Principais objetivos
+---
 
-- Gerenciamento de tarefas através de quadros Kanban
-- Organização de projetos e equipes
-- Fluxos de trabalho personalizáveis
-- Automações de processos
-- Controle de permissões e usuários
-- Integrações com sistemas externos
-- Hospedagem própria (self-hosted)
-- Arquitetura extensível para novos módulos
+## Funcionalidades
 
-## Visão do Produto
+- **Quadros Kanban** com colunas e cards, **arrastar-e-soltar** (dentro e entre
+  colunas) e ordenação estável por ranking fracionário.
+- **Cards ricos**: descrição em Markdown, labels coloridas, prazo (due date),
+  comentários, anexos e feed de atividade.
+- **Organizações e membros** com papéis (OWNER, ADMIN, MEMBER, VIEWER).
+- **Permissões por quadro**: quadros públicos à organização ou privados, com
+  papéis específicos por quadro. Veja [docs/PERMISSIONS.md](docs/PERMISSIONS.md).
+- **Busca ao vivo** no quadro (título + descrição) e tema **claro/escuro**.
+- **Integrações** (veja abaixo): API REST pública, servidor **MCP** para agentes
+  de IA, e **webhooks** de eventos.
+- **Conta**: cadastro/login próprios, avatar de iniciais e troca de senha.
 
-O Ocean Flow nasce como uma ferramenta de gestão baseada em Kanban, mas evolui para uma plataforma completa de orquestração de processos, permitindo que empresas gerenciem projetos, operações, aprovações, atendimento, CRM e fluxos internos em um único ambiente.
+## Stack
+
+| Camada       | Tecnologia                                  |
+| ------------ | ------------------------------------------- |
+| Framework    | Next.js (App Router) + TypeScript — monólito |
+| Banco        | PostgreSQL + Prisma                          |
+| UI           | Tailwind CSS v4                              |
+| Drag & drop  | @dnd-kit                                     |
+| Autenticação | Auth.js (NextAuth v5, credenciais)          |
+| Deploy       | Docker + Docker Compose                      |
+
+Detalhes de arquitetura e convenções: [AGENTS.md](AGENTS.md) ·
+fluxo de desenvolvimento: [DEVELOPMENT.md](DEVELOPMENT.md).
+
+---
+
+## Subindo com Docker (recomendado)
+
+Pré-requisito: Docker.
+
+```bash
+git clone https://github.com/mfelippe/ocean-flow.git
+cd ocean-flow
+docker compose up --build
+```
+
+A aplicação sobe em <http://localhost:3000> (app + PostgreSQL). As migrations
+são aplicadas automaticamente no start, e os anexos ficam num volume
+(`oceanflow_uploads`).
+
+> **Produção:** troque `AUTH_SECRET` por um valor próprio
+> (`openssl rand -base64 32`) no `docker-compose.yml`.
+
+## Desenvolvimento local
+
+Pré-requisitos: Node 22 (veja [.nvmrc](.nvmrc)), Docker, Git.
+
+```bash
+nvm use
+npm install
+cp .env.example .env          # ajuste AUTH_SECRET
+docker compose up db -d        # apenas o Postgres
+npm run db:migrate             # aplica as migrations
+npm run dev                    # http://localhost:3000
+```
+
+Scripts úteis: `npm run typecheck`, `npm run lint`, `npm run db:studio`.
+
+## Variáveis de ambiente
+
+| Variável        | Descrição                                              |
+| --------------- | ------------------------------------------------------ |
+| `DATABASE_URL`  | String de conexão do PostgreSQL                        |
+| `AUTH_SECRET`   | Segredo do Auth.js (`openssl rand -base64 32`)         |
+| `AUTH_URL`      | URL base da aplicação (ex.: `http://localhost:3000`)   |
+| `UPLOAD_DIR`    | Diretório dos anexos (padrão `./uploads`; Docker: `/data/uploads`) |
+| `NODE_ENV`      | `development` / `production`                           |
+
+---
+
+## Integrações
+
+Tudo é configurado por organização em **Integrações**
+(`/orgs/<slug>/settings`, restrito a OWNER/ADMIN) e autenticado por **token de
+API** (`Authorization: Bearer <token>`).
+
+- **API REST** — ler/criar/atualizar quadros e cards. → [docs/API.md](docs/API.md)
+- **Servidor MCP** — exponha o Kanban como ferramentas para agentes de IA.
+  → [docs/MCP.md](docs/MCP.md)
+- **Webhooks** — receba eventos (card criado/movido, comentário, anexo…) com
+  payload assinado. → [docs/WEBHOOKS.md](docs/WEBHOOKS.md)
 
 ## Público-alvo
 
-- Pequenas e médias empresas
-- Equipes de desenvolvimento
-- Times de produto
-- Operações e backoffice
-- Escritórios e prestadores de serviço
-- Organizações que buscam independência de soluções SaaS
+Pequenas e médias empresas, times de produto e desenvolvimento, operações e
+backoffice, e organizações que buscam independência de soluções SaaS.
 
-## Status
+## Licença
 
-🚧 Em desenvolvimento.
+Open source. (Defina aqui a licença do projeto, ex.: MIT.)
