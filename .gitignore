@@ -16,6 +16,9 @@ next-env.d.ts
 # anexos (uploads em disco)
 /uploads
 
+# backups do banco
+/backups
+
 # ambiente
 .env
 .env*.local

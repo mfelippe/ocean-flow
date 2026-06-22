@@ -25,11 +25,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Prisma: schema + engine + client gerado, para rodar migrate deploy no start.
+# Prisma: schema + node_modules completo (CLI + deps + client gerado) para
+# rodar `migrate deploy` no start. Sobrescreve o node_modules mínimo do
+# standalone (superset — o server.js continua funcionando).
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Diretório de anexos (montado como volume em produção).
 RUN mkdir -p /data/uploads && chown -R nextjs:nodejs /data

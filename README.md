@@ -54,8 +54,8 @@ A aplicação sobe em <http://localhost:3000> (app + PostgreSQL). As migrations
 são aplicadas automaticamente no start, e os anexos ficam num volume
 (`oceanflow_uploads`).
 
-> **Produção:** troque `AUTH_SECRET` por um valor próprio
-> (`openssl rand -base64 32`) no `docker-compose.yml`.
+> **Produção:** para usar a imagem publicada (sem build), secrets via `.env`,
+> backup, upgrade e HTTPS, veja o guia **[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md)**.
 
 ## Desenvolvimento local
 
