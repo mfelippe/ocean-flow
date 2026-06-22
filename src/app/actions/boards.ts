@@ -193,49 +193,33 @@ export async function archiveCard(cardId: string): Promise<void> {
   revalidatePath(boardPath(board.organization.slug, card.column.boardId));
 }
 
-export async function moveCard(
+/**
+ * Persiste o resultado de um drag & drop: move o card para uma coluna do
+ * mesmo board, na posição indicada pelo `rank` (calculado no cliente entre
+ * os vizinhos). Grava apenas a linha movida.
+ */
+export async function moveCardTo(
   cardId: string,
-  action: "up" | "down" | "prev" | "next",
+  toColumnId: string,
+  rank: string,
 ): Promise<void> {
+  if (typeof rank !== "string" || rank.length === 0) return;
+
   const card = await prisma.card.findUnique({
     where: { id: cardId },
     include: { column: true },
   });
   if (!card) return;
-  const { board } = await requireBoardWrite(card.column.boardId);
-  const boardId = card.column.boardId;
 
-  if (action === "up" || action === "down") {
-    const cards = await prisma.card.findMany({
-      where: { columnId: card.columnId, archivedAt: null },
-      orderBy: { rank: "asc" },
-    });
-    const i = cards.findIndex((c) => c.id === cardId);
-    if (action === "up" && i > 0) {
-      const rank = rankBetween(cards[i - 2]?.rank ?? null, cards[i - 1].rank);
-      await prisma.card.update({ where: { id: cardId }, data: { rank } });
-    } else if (action === "down" && i < cards.length - 1) {
-      const rank = rankBetween(cards[i + 1].rank, cards[i + 2]?.rank ?? null);
-      await prisma.card.update({ where: { id: cardId }, data: { rank } });
-    }
-  } else {
-    // mover para a coluna anterior/seguinte → vai para o fim da coluna destino
-    const cols = await prisma.column.findMany({
-      where: { boardId },
-      orderBy: { rank: "asc" },
-    });
-    const ci = cols.findIndex((c) => c.id === card.columnId);
-    const target = action === "prev" ? cols[ci - 1] : cols[ci + 1];
-    if (target) {
-      const last = await prisma.card.findFirst({
-        where: { columnId: target.id, archivedAt: null },
-        orderBy: { rank: "desc" },
-      });
-      await prisma.card.update({
-        where: { id: cardId },
-        data: { columnId: target.id, rank: rankBetween(last?.rank ?? null, null) },
-      });
-    }
-  }
-  revalidatePath(boardPath(board.organization.slug, boardId));
+  const { board } = await requireBoardWrite(card.column.boardId);
+
+  // O destino precisa pertencer ao mesmo board (não cruza organizações/quadros).
+  const target = await prisma.column.findUnique({ where: { id: toColumnId } });
+  if (!target || target.boardId !== card.column.boardId) return;
+
+  await prisma.card.update({
+    where: { id: cardId },
+    data: { columnId: toColumnId, rank },
+  });
+  revalidatePath(boardPath(board.organization.slug, card.column.boardId));
 }
