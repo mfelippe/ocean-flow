@@ -98,10 +98,14 @@ curl -H "Authorization: Bearer $TOKEN" https://seu-host/api/v1/cards/$CARD_ID
     "column": { "id": "col_1", "name": "A Fazer" },
     "labels": [ { "id": "...", "name": "Urgente", "color": "#ef4444" } ],
     "comments": [ { "id": "...", "body": "...", "author": "Fulano", "createdAt": "..." } ],
-    "attachments": [ { "id": "...", "fileName": "doc.pdf", "mimeType": "application/pdf", "size": 12345 } ]
+    "attachments": [ { "id": "...", "fileName": "doc.pdf", "mimeType": "application/pdf", "size": 12345 } ],
+    "fields": [ { "id": "fld_1", "name": "Telefone", "type": "TEXT", "value": "5511999999999" } ]
   }
 }
 ```
+
+`fields` traz os **campos personalizados** do quadro com o valor do card
+(`value: null` quando vazio) — úteis para integrações (ex.: telefone do WhatsApp).
 
 ### `PATCH /api/v1/cards/{cardId}`
 
@@ -114,6 +118,7 @@ outra coluna do mesmo quadro (vai para o fim da coluna destino).
 | `description` | string ou null  |                                |
 | `dueDate`     | string ou null  | data ISO (ex.: `2026-08-01`)   |
 | `columnId`    | string          | move para esta coluna          |
+| `fields`      | objeto          | mapa `fieldId → valor` (campos personalizados; `""` limpa) |
 
 ```bash
 curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \

@@ -57,12 +57,19 @@ export const apiTokenSchema = z.object({
   name: z.string().trim().min(1, "Dê um nome ao token.").max(60),
 });
 
+export const customFieldSchema = z.object({
+  name: z.string().trim().min(1, "Informe o nome do campo.").max(40),
+  type: z.enum(["TEXT", "NUMBER", "DATE"]),
+});
+
 // Atualização parcial de card pela API pública (todos os campos opcionais).
 export const apiCardUpdateSchema = z.object({
   title: z.string().trim().min(1, "Título não pode ser vazio.").max(500).optional(),
   description: z.string().max(5000).nullable().optional(),
   dueDate: z.string().nullable().optional(),
   columnId: z.string().min(1).optional(),
+  // mapa fieldId → valor (string); "" limpa o campo
+  fields: z.record(z.string(), z.string()).optional(),
 });
 
 export const changePasswordSchema = z

@@ -30,6 +30,12 @@ enum BoardVisibility {
   PRIVATE
 }
 
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+}
+
 enum ActivityType {
   CARD_CREATED
   CARD_MOVED
@@ -127,8 +133,35 @@ model Board {
   labels       Label[]
   activities   Activity[]
   members      BoardMembership[]
+  customFields CustomField[]
 
   @@index([organizationId])
+}
+
+model CustomField {
+  id        String          @id @default(cuid())
+  boardId   String
+  name      String
+  type      CustomFieldType @default(TEXT)
+  createdAt DateTime        @default(now())
+
+  board  Board            @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  values CardFieldValue[]
+
+  @@index([boardId])
+}
+
+model CardFieldValue {
+  id      String @id @default(cuid())
+  cardId  String
+  fieldId String
+  value   String
+
+  card  Card        @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  field CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, fieldId])
+  @@index([fieldId])
 }
 
 model BoardMembership {
@@ -177,6 +210,7 @@ model Card {
   comments    Comment[]
   attachments Attachment[]
   activities  Activity[]
+  fieldValues CardFieldValue[]
 
   @@index([columnId])
 }

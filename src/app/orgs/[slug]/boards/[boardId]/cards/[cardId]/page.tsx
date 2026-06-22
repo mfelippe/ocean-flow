@@ -19,6 +19,8 @@ import { AddCommentForm } from "@/components/add-comment-form";
 import { CreateLabelForm } from "@/components/create-label-form";
 import { AttachmentForm } from "@/components/attachment-form";
 import { ConfirmButton } from "@/components/confirm-button";
+import { setCardFields } from "@/app/actions/custom-fields";
+import { CardFieldsForm } from "@/components/card-fields-form";
 import { inputClass } from "@/components/form";
 
 function activityText(type: string, payload: unknown): string {
@@ -70,6 +72,7 @@ export default async function CardPage({
       labels: { include: { label: true } },
       comments: { include: { author: true }, orderBy: { createdAt: "desc" } },
       attachments: { orderBy: { createdAt: "desc" } },
+      fieldValues: true,
     },
   });
   if (!card || card.column.boardId !== boardId) notFound();
@@ -78,6 +81,16 @@ export default async function CardPage({
     where: { boardId },
     orderBy: { name: "asc" },
   });
+  const customFields = await prisma.customField.findMany({
+    where: { boardId },
+    orderBy: { createdAt: "asc" },
+  });
+  const fieldVMs = customFields.map((f) => ({
+    id: f.id,
+    name: f.name,
+    type: f.type,
+    value: card.fieldValues.find((v) => v.fieldId === f.id)?.value ?? "",
+  }));
   const activities = await prisma.activity.findMany({
     where: { cardId },
     include: { actor: true },
@@ -264,6 +277,19 @@ export default async function CardPage({
               </p>
             )}
           </section>
+
+          {fieldVMs.length > 0 && (
+            <section>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-subtle">
+                Campos
+              </h3>
+              <CardFieldsForm
+                fields={fieldVMs}
+                canWrite={canWrite}
+                action={setCardFields.bind(null, cardId)}
+              />
+            </section>
+          )}
 
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-subtle">

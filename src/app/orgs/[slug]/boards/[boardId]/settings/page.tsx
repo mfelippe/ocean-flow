@@ -7,9 +7,20 @@ import {
   removeBoardMember,
   setBoardVisibility,
 } from "@/app/actions/board-access";
+import {
+  createCustomField,
+  deleteCustomField,
+} from "@/app/actions/custom-fields";
 import { AddBoardMemberForm } from "@/components/add-board-member-form";
+import { CreateCustomFieldForm } from "@/components/create-custom-field-form";
 import { ConfirmButton } from "@/components/confirm-button";
 import { UserMenu } from "@/components/user-menu";
+
+const FIELD_TYPE_LABEL: Record<string, string> = {
+  TEXT: "Texto",
+  NUMBER: "Número",
+  DATE: "Data",
+};
 
 export default async function BoardAccessPage({
   params,
@@ -28,8 +39,14 @@ export default async function BoardAccessPage({
     orderBy: { createdAt: "asc" },
   });
 
+  const customFields = await prisma.customField.findMany({
+    where: { boardId },
+    orderBy: { createdAt: "asc" },
+  });
+
   const isPrivate = board.visibility === "PRIVATE";
   const boundAddMember = addBoardMember.bind(null, boardId);
+  const boundCreateField = createCustomField.bind(null, boardId);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -113,6 +130,45 @@ export default async function BoardAccessPage({
         )}
 
         <AddBoardMemberForm action={boundAddMember} />
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-1 text-sm font-semibold text-ink">
+          Campos personalizados ({customFields.length})
+        </h2>
+        <p className="mb-3 text-xs text-muted">
+          Campos extras preenchidos em cada card (ex.: Telefone, CPF). Aparecem
+          no card e na API — úteis para integrações.
+        </p>
+
+        {customFields.length > 0 && (
+          <ul className="mb-4 divide-y divide-edge overflow-hidden rounded-xl border border-edge">
+            {customFields.map((f) => (
+              <li
+                key={f.id}
+                className="flex items-center justify-between bg-panel/60 px-4 py-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">{f.name}</p>
+                  <p className="text-xs text-subtle">
+                    {FIELD_TYPE_LABEL[f.type] ?? f.type}
+                  </p>
+                </div>
+                <ConfirmButton
+                  action={deleteCustomField.bind(null, f.id)}
+                  triggerClassName="text-xs text-subtle hover:text-red-400"
+                  title="Excluir campo?"
+                  description={`O campo "${f.name}" e seus valores em todos os cards serão removidos.`}
+                  confirmLabel="Excluir"
+                >
+                  excluir
+                </ConfirmButton>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <CreateCustomFieldForm action={boundCreateField} />
       </section>
     </main>
   );

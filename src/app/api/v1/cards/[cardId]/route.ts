@@ -5,6 +5,7 @@ import { jsonError, requireApiToken } from "@/lib/api-auth";
 import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
 import { apiCardUpdateSchema } from "@/lib/validations";
+import { normalizeFieldValue } from "@/lib/custom-fields";
 
 /** Carrega um card garantindo que pertence à organização do token. */
 async function loadCardForOrg(cardId: string, organizationId: string) {
@@ -34,11 +35,17 @@ export async function GET(
         orderBy: { createdAt: "desc" },
       },
       attachments: { orderBy: { createdAt: "desc" } },
+      fieldValues: true,
     },
   });
   if (!card || card.column.board.organizationId !== auth.organizationId) {
     return jsonError(404, "Card não encontrado.");
   }
+
+  const customFields = await prisma.customField.findMany({
+    where: { boardId: card.column.board.id },
+    orderBy: { createdAt: "asc" },
+  });
 
   return NextResponse.json({
     card: {
@@ -66,6 +73,12 @@ export async function GET(
         fileName: a.fileName,
         mimeType: a.mimeType,
         size: a.size,
+      })),
+      fields: customFields.map((f) => ({
+        id: f.id,
+        name: f.name,
+        type: f.type,
+        value: card.fieldValues.find((v) => v.fieldId === f.id)?.value ?? null,
       })),
     },
   });
@@ -125,11 +138,38 @@ export async function PATCH(
     movedTo = target.name;
   }
 
-  if (Object.keys(data).length === 0) {
+  const hasFields = !!input.fields && Object.keys(input.fields).length > 0;
+  if (Object.keys(data).length === 0 && !hasFields) {
     return jsonError(400, "Nenhum campo para atualizar.");
   }
 
-  const updated = await prisma.card.update({ where: { id: cardId }, data });
+  const updated =
+    Object.keys(data).length > 0
+      ? await prisma.card.update({ where: { id: cardId }, data })
+      : card;
+
+  // Campos personalizados (mapa fieldId → valor; "" limpa).
+  if (input.fields) {
+    const boardFields = await prisma.customField.findMany({
+      where: { boardId: card.column.boardId },
+    });
+    const byId = new Map(boardFields.map((f) => [f.id, f]));
+    for (const [fieldId, raw] of Object.entries(input.fields)) {
+      const field = byId.get(fieldId);
+      if (!field) continue; // ignora ids fora do quadro
+      const norm = normalizeFieldValue(field.type, raw);
+      if ("error" in norm) return jsonError(400, `${field.name}: ${norm.error}`);
+      if (norm.value === "") {
+        await prisma.cardFieldValue.deleteMany({ where: { cardId, fieldId } });
+      } else {
+        await prisma.cardFieldValue.upsert({
+          where: { cardId_fieldId: { cardId, fieldId } },
+          update: { value: norm.value },
+          create: { cardId, fieldId, value: norm.value },
+        });
+      }
+    }
+  }
 
   await logActivity({
     boardId: card.column.boardId,
