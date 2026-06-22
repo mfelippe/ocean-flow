@@ -5,6 +5,7 @@ import { getBoardContext } from "@/lib/authz";
 import { archiveBoard, renameBoard } from "@/app/actions/boards";
 import { BoardBody } from "@/components/board-body";
 import { UserMenu } from "@/components/user-menu";
+import { ConfirmButton } from "@/components/confirm-button";
 import { inputClass } from "@/components/form";
 
 export default async function BoardPage({
@@ -88,11 +89,15 @@ export default async function BoardPage({
         </div>
         <div className="flex items-center gap-4">
           {canWrite && (
-            <form action={archiveBoard.bind(null, boardId)}>
-              <button className="text-xs text-subtle hover:text-red-400">
-                Arquivar quadro
-              </button>
-            </form>
+            <ConfirmButton
+              action={archiveBoard.bind(null, boardId)}
+              triggerClassName="text-xs text-subtle hover:text-red-400"
+              title="Arquivar quadro?"
+              description={`O quadro "${board.name}" será arquivado e sairá da lista da organização.`}
+              confirmLabel="Arquivar quadro"
+            >
+              Arquivar quadro
+            </ConfirmButton>
           )}
           <UserMenu name={user.name ?? ""} email={user.email ?? ""} />
         </div>

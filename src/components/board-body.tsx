@@ -38,6 +38,7 @@ import {
   renameColumn,
 } from "@/app/actions/boards";
 import { inputClass } from "@/components/form";
+import { ConfirmButton } from "@/components/confirm-button";
 
 export type LabelT = { id: string; name: string; color: string };
 export type CardT = {
@@ -382,9 +383,15 @@ function ColumnView({
                 ▶
               </button>
             </form>
-            <form action={deleteColumn.bind(null, column.id)}>
-              <button className={`${iconBtn} hover:text-red-400`}>✕</button>
-            </form>
+            <ConfirmButton
+              action={deleteColumn.bind(null, column.id)}
+              triggerClassName={`${iconBtn} hover:text-red-400`}
+              title="Excluir coluna?"
+              description={`A coluna "${column.name}" e todos os seus cards serão removidos. Esta ação não pode ser desfeita.`}
+              confirmLabel="Excluir coluna"
+            >
+              ✕
+            </ConfirmButton>
           </div>
         )}
       </div>
@@ -514,9 +521,15 @@ function SortableCard({
           abrir
         </Link>
         {canWrite && (
-          <form action={archiveCard.bind(null, card.id)}>
-            <button className={`${iconBtn} hover:text-red-400`}>🗑</button>
-          </form>
+          <ConfirmButton
+            action={archiveCard.bind(null, card.id)}
+            triggerClassName={`${iconBtn} hover:text-red-400`}
+            title="Arquivar card?"
+            description={`"${card.title}" será arquivado e sairá do quadro.`}
+            confirmLabel="Arquivar"
+          >
+            🗑
+          </ConfirmButton>
         )}
       </div>
     </article>

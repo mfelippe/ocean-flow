@@ -18,6 +18,7 @@ import { CardContent } from "@/components/card-content";
 import { AddCommentForm } from "@/components/add-comment-form";
 import { CreateLabelForm } from "@/components/create-label-form";
 import { AttachmentForm } from "@/components/attachment-form";
+import { ConfirmButton } from "@/components/confirm-button";
 import { inputClass } from "@/components/form";
 
 function activityText(type: string, payload: unknown): string {
@@ -130,11 +131,15 @@ export default async function CardPage({
                     {fmtSize(a.size)}
                   </span>
                   {canWrite && (
-                    <form action={deleteAttachment.bind(null, a.id)}>
-                      <button className="text-xs text-subtle hover:text-red-400">
-                        remover
-                      </button>
-                    </form>
+                    <ConfirmButton
+                      action={deleteAttachment.bind(null, a.id)}
+                      triggerClassName="text-xs text-subtle hover:text-red-400"
+                      title="Remover anexo?"
+                      description={`"${a.fileName}" será excluído permanentemente.`}
+                      confirmLabel="Remover"
+                    >
+                      remover
+                    </ConfirmButton>
                   )}
                 </li>
               ))}
@@ -167,14 +172,17 @@ export default async function CardPage({
                   </div>
                   <p className="mt-1 whitespace-pre-wrap text-sm">{c.body}</p>
                   {canWrite && (
-                    <form
-                      action={deleteComment.bind(null, c.id)}
-                      className="mt-1 text-right"
-                    >
-                      <button className="text-xs text-subtle hover:text-red-400">
+                    <div className="mt-1 text-right">
+                      <ConfirmButton
+                        action={deleteComment.bind(null, c.id)}
+                        triggerClassName="text-xs text-subtle hover:text-red-400"
+                        title="Remover comentário?"
+                        description="O comentário será excluído permanentemente."
+                        confirmLabel="Remover"
+                      >
                         remover
-                      </button>
-                    </form>
+                      </ConfirmButton>
+                    </div>
                   )}
                 </li>
               ))}
