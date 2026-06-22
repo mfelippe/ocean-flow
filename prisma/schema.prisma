@@ -1,0 +1,191 @@
+// Ocean Flow — modelo de dados
+// Kanban self-hosted. Instância única com múltiplas Organizações (workspaces).
+// Ordenação de colunas/cards usa ranking fracionário (campo `rank`, string)
+// para mover itens sem reindexar a lista inteira.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum ActivityType {
+  CARD_CREATED
+  CARD_MOVED
+  CARD_UPDATED
+  CARD_ARCHIVED
+  COMMENT_ADDED
+  MEMBER_ADDED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships  Membership[]
+  createdCards Card[]       @relation("CardCreatedBy")
+  comments     Comment[]
+  activities   Activity[]   @relation("ActivityActor")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  boards      Board[]
+}
+
+model Membership {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role     @default(MEMBER)
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Board {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  color          String?
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  columns      Column[]
+  labels       Label[]
+  activities   Activity[]
+
+  @@index([organizationId])
+}
+
+model Column {
+  id        String   @id @default(cuid())
+  boardId   String
+  name      String
+  rank      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards Card[]
+
+  @@index([boardId])
+}
+
+model Card {
+  id          String    @id @default(cuid())
+  columnId    String
+  title       String
+  description String?
+  rank        String
+  dueDate     DateTime?
+  archivedAt  DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  column      Column      @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  createdBy   User?       @relation("CardCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  labels      CardLabel[]
+  comments    Comment[]
+  attachments Attachment[]
+  activities  Activity[]
+
+  @@index([columnId])
+}
+
+model Label {
+  id      String @id @default(cuid())
+  boardId String
+  name    String
+  color   String
+
+  board Board       @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards CardLabel[]
+
+  @@index([boardId])
+}
+
+model CardLabel {
+  cardId  String
+  labelId String
+
+  card  Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, labelId])
+  @@index([labelId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  cardId    String
+  authorId  String?
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  card   Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([cardId])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  cardId    String
+  fileName  String
+  filePath  String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId])
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  boardId   String
+  cardId    String?
+  actorId   String?
+  type      ActivityType
+  payload   Json?
+  createdAt DateTime     @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  card  Card? @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  actor User? @relation("ActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([boardId])
+  @@index([cardId])
+}

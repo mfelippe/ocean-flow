@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oceanflow
+      POSTGRES_PASSWORD: oceanflow
+      POSTGRES_DB: oceanflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - oceanflow_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oceanflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://oceanflow:oceanflow@db:5432/oceanflow?schema=public"
+      AUTH_SECRET: "troque-este-valor-em-producao"
+      AUTH_URL: "http://localhost:3000"
+      NODE_ENV: "production"
+    ports:
+      - "3000:3000"
+
+volumes:
+  oceanflow_db:
