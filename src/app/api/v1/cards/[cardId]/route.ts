@@ -16,6 +16,61 @@ async function loadCardForOrg(cardId: string, organizationId: string) {
   return card;
 }
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ cardId: string }> },
+) {
+  const auth = await requireApiToken(request);
+  if (auth instanceof NextResponse) return auth;
+  const { cardId } = await params;
+
+  const card = await prisma.card.findUnique({
+    where: { id: cardId },
+    include: {
+      column: { include: { board: { select: { id: true, organizationId: true } } } },
+      labels: { include: { label: true } },
+      comments: {
+        include: { author: { select: { id: true, name: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+      attachments: { orderBy: { createdAt: "desc" } },
+    },
+  });
+  if (!card || card.column.board.organizationId !== auth.organizationId) {
+    return jsonError(404, "Card não encontrado.");
+  }
+
+  return NextResponse.json({
+    card: {
+      id: card.id,
+      title: card.title,
+      description: card.description,
+      dueDate: card.dueDate,
+      archivedAt: card.archivedAt,
+      createdAt: card.createdAt,
+      boardId: card.column.board.id,
+      column: { id: card.column.id, name: card.column.name },
+      labels: card.labels.map((cl) => ({
+        id: cl.label.id,
+        name: cl.label.name,
+        color: cl.label.color,
+      })),
+      comments: card.comments.map((c) => ({
+        id: c.id,
+        body: c.body,
+        author: c.author?.name ?? null,
+        createdAt: c.createdAt,
+      })),
+      attachments: card.attachments.map((a) => ({
+        id: a.id,
+        fileName: a.fileName,
+        mimeType: a.mimeType,
+        size: a.size,
+      })),
+    },
+  });
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ cardId: string }> },

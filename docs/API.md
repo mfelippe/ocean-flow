@@ -76,6 +76,33 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 { "card": { "id": "...", "title": "Nova tarefa", "columnId": "col_1" } }
 ```
 
+### `GET /api/v1/cards/{cardId}`
+
+Retorna os dados completos de um card (descrição, prazo, labels, comentários e
+anexos). `404` se o card não pertence à org do token.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" https://seu-host/api/v1/cards/$CARD_ID
+```
+
+```json
+{
+  "card": {
+    "id": "...",
+    "title": "Tarefa",
+    "description": "## Detalhes…",
+    "dueDate": "2026-08-01T00:00:00.000Z",
+    "archivedAt": null,
+    "createdAt": "...",
+    "boardId": "...",
+    "column": { "id": "col_1", "name": "A Fazer" },
+    "labels": [ { "id": "...", "name": "Urgente", "color": "#ef4444" } ],
+    "comments": [ { "id": "...", "body": "...", "author": "Fulano", "createdAt": "..." } ],
+    "attachments": [ { "id": "...", "fileName": "doc.pdf", "mimeType": "application/pdf", "size": 12345 } ]
+  }
+}
+```
+
 ### `PATCH /api/v1/cards/{cardId}`
 
 Atualiza um card (campos parciais). Inclua `columnId` para **mover** o card para
