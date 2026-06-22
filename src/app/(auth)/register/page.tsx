@@ -43,14 +43,14 @@ export default function RegisterPage() {
           minLength={8}
           className={inputClass}
         />
-        <p className="text-xs text-slate-500">Mínimo de 8 caracteres.</p>
+        <p className="text-xs text-subtle">Mínimo de 8 caracteres.</p>
       </div>
 
       <SubmitButton pendingLabel="Criando conta…">Criar conta</SubmitButton>
 
-      <p className="text-center text-sm text-slate-400">
+      <p className="text-center text-sm text-muted">
         Já tem conta?{" "}
-        <Link href="/login" className="text-teal-400 hover:underline">
+        <Link href="/login" className="text-brand hover:underline">
           Entrar
         </Link>
       </p>

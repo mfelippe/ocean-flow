@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { logout } from "@/app/actions/auth";
 import { CreateOrgForm } from "@/components/create-org-form";
+import { UserMenu } from "@/components/user-menu";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -18,23 +18,16 @@ export default async function DashboardPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Suas organizações</h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted">
             Olá, {user.name ?? user.email}.
           </p>
         </div>
-        <form action={logout}>
-          <button
-            type="submit"
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
-          >
-            Sair
-          </button>
-        </form>
+        <UserMenu name={user.name ?? ""} email={user.email ?? ""} />
       </header>
 
       <section className="mt-8 space-y-3">
         {memberships.length === 0 ? (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted">
             Você ainda não participa de nenhuma organização. Crie a primeira abaixo.
           </p>
         ) : (
@@ -43,10 +36,10 @@ export default async function DashboardPage() {
               <li key={m.id}>
                 <Link
                   href={`/orgs/${m.organization.slug}`}
-                  className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-3 transition hover:border-teal-400"
+                  className="flex items-center justify-between rounded-xl border border-edge bg-panel px-4 py-3 transition hover:border-brand"
                 >
                   <span className="font-medium">{m.organization.name}</span>
-                  <span className="text-xs uppercase tracking-wide text-slate-500">
+                  <span className="text-xs uppercase tracking-wide text-subtle">
                     {m.role}
                   </span>
                 </Link>
@@ -56,8 +49,8 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      <section className="mt-8 rounded-xl border border-slate-800 bg-slate-900/30 p-5">
-        <h2 className="mb-3 text-sm font-semibold text-slate-300">
+      <section className="mt-8 rounded-xl border border-edge bg-panel/60 p-5">
+        <h2 className="mb-3 text-sm font-semibold text-ink">
           Nova organização
         </h2>
         <CreateOrgForm />

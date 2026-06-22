@@ -44,5 +44,16 @@ export const commentSchema = z.object({
   body: z.string().trim().min(1, "Escreva um comentário.").max(5000),
 });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Informe a senha atual."),
+    newPassword: z.string().min(8, "A nova senha deve ter ao menos 8 caracteres."),
+    confirm: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirm, {
+    message: "A confirmação não confere com a nova senha.",
+    path: ["confirm"],
+  });
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

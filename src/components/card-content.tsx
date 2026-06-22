@@ -50,7 +50,7 @@ export function CardContent({
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
+            className="rounded-lg border border-edge px-4 py-2 text-sm text-ink hover:bg-edge"
           >
             Cancelar
           </button>
@@ -67,7 +67,7 @@ export function CardContent({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="shrink-0 rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800"
+            className="shrink-0 rounded-lg border border-edge px-3 py-1 text-xs text-ink hover:bg-edge"
           >
             Editar
           </button>
@@ -77,7 +77,7 @@ export function CardContent({
         {description ? (
           <Markdown>{description}</Markdown>
         ) : (
-          <p className="text-sm text-slate-500">Sem descrição.</p>
+          <p className="text-sm text-subtle">Sem descrição.</p>
         )}
       </div>
     </div>

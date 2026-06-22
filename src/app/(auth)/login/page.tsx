@@ -39,9 +39,9 @@ export default function LoginPage() {
 
       <SubmitButton pendingLabel="Entrando…">Entrar</SubmitButton>
 
-      <p className="text-center text-sm text-slate-400">
+      <p className="text-center text-sm text-muted">
         Não tem conta?{" "}
-        <Link href="/register" className="text-teal-400 hover:underline">
+        <Link href="/register" className="text-brand hover:underline">
           Cadastre-se
         </Link>
       </p>

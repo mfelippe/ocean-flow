@@ -89,7 +89,7 @@ export default async function CardPage({
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-8">
-      <Link href={boardHref} className="text-sm text-slate-400 hover:text-teal-400">
+      <Link href={boardHref} className="text-sm text-muted hover:text-brand">
         ← {card.column.name}
       </Link>
 
@@ -104,7 +104,7 @@ export default async function CardPage({
           />
 
           <section>
-            <h2 className="mb-3 text-sm font-semibold text-slate-300">
+            <h2 className="mb-3 text-sm font-semibold text-ink">
               Anexos ({card.attachments.length})
             </h2>
             {canWrite && (
@@ -116,22 +116,22 @@ export default async function CardPage({
               {card.attachments.map((a) => (
                 <li
                   key={a.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-edge bg-panel px-3 py-2"
                 >
                   <a
                     href={`/api/attachments/${a.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="min-w-0 flex-1 truncate text-sm text-teal-400 hover:underline"
+                    className="min-w-0 flex-1 truncate text-sm text-brand hover:underline"
                   >
                     📎 {a.fileName}
                   </a>
-                  <span className="shrink-0 text-xs text-slate-500">
+                  <span className="shrink-0 text-xs text-subtle">
                     {fmtSize(a.size)}
                   </span>
                   {canWrite && (
                     <form action={deleteAttachment.bind(null, a.id)}>
-                      <button className="text-xs text-slate-600 hover:text-red-400">
+                      <button className="text-xs text-subtle hover:text-red-400">
                         remover
                       </button>
                     </form>
@@ -139,13 +139,13 @@ export default async function CardPage({
                 </li>
               ))}
               {card.attachments.length === 0 && (
-                <li className="text-sm text-slate-500">Nenhum anexo.</li>
+                <li className="text-sm text-subtle">Nenhum anexo.</li>
               )}
             </ul>
           </section>
 
           <section>
-            <h2 className="mb-3 text-sm font-semibold text-slate-300">
+            <h2 className="mb-3 text-sm font-semibold text-ink">
               Comentários ({card.comments.length})
             </h2>
             {canWrite && (
@@ -157,10 +157,10 @@ export default async function CardPage({
               {card.comments.map((c) => (
                 <li
                   key={c.id}
-                  className="rounded-lg border border-slate-800 bg-slate-900/40 p-3"
+                  className="rounded-lg border border-edge bg-panel p-3"
                 >
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span className="font-medium text-slate-300">
+                  <div className="flex items-center justify-between text-xs text-subtle">
+                    <span className="font-medium text-ink">
                       {c.author?.name ?? "—"}
                     </span>
                     <span>{fmt(c.createdAt)}</span>
@@ -171,7 +171,7 @@ export default async function CardPage({
                       action={deleteComment.bind(null, c.id)}
                       className="mt-1 text-right"
                     >
-                      <button className="text-xs text-slate-600 hover:text-red-400">
+                      <button className="text-xs text-subtle hover:text-red-400">
                         remover
                       </button>
                     </form>
@@ -179,7 +179,7 @@ export default async function CardPage({
                 </li>
               ))}
               {card.comments.length === 0 && (
-                <li className="text-sm text-slate-500">Nenhum comentário ainda.</li>
+                <li className="text-sm text-subtle">Nenhum comentário ainda.</li>
               )}
             </ul>
           </section>
@@ -188,7 +188,7 @@ export default async function CardPage({
         {/* Barra lateral */}
         <aside className="space-y-6">
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-subtle">
               Labels
             </h3>
             <div className="flex flex-wrap gap-1.5">
@@ -221,7 +221,7 @@ export default async function CardPage({
                 );
               })}
               {boardLabels.length === 0 && (
-                <p className="text-xs text-slate-500">Nenhuma label no quadro.</p>
+                <p className="text-xs text-subtle">Nenhuma label no quadro.</p>
               )}
             </div>
             {canWrite && (
@@ -232,7 +232,7 @@ export default async function CardPage({
           </section>
 
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-subtle">
               Prazo
             </h3>
             {canWrite ? (
@@ -246,7 +246,7 @@ export default async function CardPage({
                   defaultValue={dueValue}
                   className={inputClass}
                 />
-                <button className="shrink-0 rounded-lg bg-teal-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-teal-400">
+                <button className="shrink-0 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-strong">
                   OK
                 </button>
               </form>
@@ -258,15 +258,15 @@ export default async function CardPage({
           </section>
 
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-subtle">
               Atividade
             </h3>
-            <ul className="space-y-2 text-xs text-slate-400">
+            <ul className="space-y-2 text-xs text-muted">
               {activities.map((a) => (
                 <li key={a.id}>
-                  <span className="text-slate-300">{a.actor?.name ?? "Alguém"}</span>{" "}
+                  <span className="text-ink">{a.actor?.name ?? "Alguém"}</span>{" "}
                   {activityText(a.type, a.payload)}
-                  <span className="block text-slate-600">{fmt(a.createdAt)}</span>
+                  <span className="block text-subtle">{fmt(a.createdAt)}</span>
                 </li>
               ))}
               {activities.length === 0 && <li>Sem atividade.</li>}

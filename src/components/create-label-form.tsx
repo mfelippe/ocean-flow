@@ -42,7 +42,7 @@ export function CreateLabelForm({ action }: { action: Action }) {
           type="color"
           name="color"
           defaultValue={PRESETS[4]}
-          className="h-9 w-10 shrink-0 cursor-pointer rounded border border-slate-700 bg-slate-900"
+          className="h-9 w-10 shrink-0 cursor-pointer rounded border border-edge bg-elevated"
           list="label-colors"
         />
         <datalist id="label-colors">

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getBoardContext } from "@/lib/authz";
 import { archiveBoard, renameBoard } from "@/app/actions/boards";
 import { BoardBody } from "@/components/board-body";
+import { UserMenu } from "@/components/user-menu";
 import { inputClass } from "@/components/form";
 
 export default async function BoardPage({
@@ -12,7 +13,7 @@ export default async function BoardPage({
   params: Promise<{ slug: string; boardId: string }>;
 }) {
   const { slug, boardId } = await params;
-  const { board, role } = await getBoardContext(boardId);
+  const { board, role, user } = await getBoardContext(boardId);
   if (board.organization.slug !== slug || board.archivedAt) notFound();
 
   const canWrite = role !== "VIEWER";
@@ -53,11 +54,11 @@ export default async function BoardPage({
 
   return (
     <main className="flex h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+      <header className="flex items-center justify-between border-b border-edge px-6 py-4">
         <div className="flex items-center gap-4">
           <Link
             href={`/orgs/${slug}`}
-            className="text-sm text-slate-400 hover:text-teal-400"
+            className="text-sm text-muted hover:text-brand"
           >
             ← {board.organization.slug}
           </Link>
@@ -68,7 +69,7 @@ export default async function BoardPage({
               </summary>
               <form
                 action={renameBoard.bind(null, boardId)}
-                className="absolute z-20 mt-2 flex gap-2 rounded-lg border border-slate-700 bg-slate-900 p-2"
+                className="absolute z-20 mt-2 flex gap-2 rounded-lg border border-edge bg-elevated p-2"
               >
                 <input
                   name="name"
@@ -76,7 +77,7 @@ export default async function BoardPage({
                   required
                   className={inputClass}
                 />
-                <button className="rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-700">
+                <button className="rounded px-2 py-0.5 text-xs text-ink hover:bg-edge">
                   Salvar
                 </button>
               </form>
@@ -85,13 +86,16 @@ export default async function BoardPage({
             <h1 className="text-lg font-bold">{board.name}</h1>
           )}
         </div>
-        {canWrite && (
-          <form action={archiveBoard.bind(null, boardId)}>
-            <button className="text-xs text-slate-500 hover:text-red-400">
-              Arquivar quadro
-            </button>
-          </form>
-        )}
+        <div className="flex items-center gap-4">
+          {canWrite && (
+            <form action={archiveBoard.bind(null, boardId)}>
+              <button className="text-xs text-subtle hover:text-red-400">
+                Arquivar quadro
+              </button>
+            </form>
+          )}
+          <UserMenu name={user.name ?? ""} email={user.email ?? ""} />
+        </div>
       </header>
 
       <BoardBody

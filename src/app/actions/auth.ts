@@ -4,9 +4,10 @@ import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { signIn, signOut } from "@/auth";
-import { registerSchema } from "@/lib/validations";
+import { requireUser } from "@/lib/session";
+import { changePasswordSchema, registerSchema } from "@/lib/validations";
 
-export type FormState = { error?: string } | undefined;
+export type FormState = { error?: string; ok?: boolean } | undefined;
 
 export async function registerUser(
   _prevState: FormState,
@@ -58,4 +59,37 @@ export async function authenticate(
 
 export async function logout() {
   await signOut({ redirectTo: "/login" });
+}
+
+export async function changePassword(
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireUser();
+
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirm: formData.get("confirm"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+  if (!dbUser) return { error: "Usuário não encontrado." };
+
+  const valid = await bcrypt.compare(
+    parsed.data.currentPassword,
+    dbUser.passwordHash,
+  );
+  if (!valid) return { error: "Senha atual incorreta." };
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash },
+  });
+
+  return { ok: true };
 }

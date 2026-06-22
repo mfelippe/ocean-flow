@@ -1,9 +1,49 @@
 @import "tailwindcss";
 
+/* Ativa a variante dark por classe (.dark no <html>), não por media query. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tokens semânticos: utilitários (bg-surface, text-ink, …) que apontam para
+   variáveis CSS, trocadas entre claro e escuro. */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-elevated: var(--elevated);
+  --color-edge: var(--edge);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink: var(--brand-ink);
+}
+
+/* Tema claro (padrão) */
 :root {
-  --background: #0b1220;
-  --foreground: #e6edf6;
-  --accent: #2dd4bf;
+  --surface: #f1f5f9;
+  --panel: #ffffff;
+  --elevated: #ffffff;
+  --edge: #e2e8f0;
+  --ink: #0f172a;
+  --muted: #475569;
+  --subtle: #94a3b8;
+  --brand: #0d9488;
+  --brand-strong: #0f766e;
+  --brand-ink: #ffffff;
+}
+
+/* Tema escuro */
+.dark {
+  --surface: #0b1220;
+  --panel: #0f172a;
+  --elevated: #1e293b;
+  --edge: #1e293b;
+  --ink: #e6edf6;
+  --muted: #cbd5e1;
+  --subtle: #94a3b8;
+  --brand: #2dd4bf;
+  --brand-strong: #5eead4;
+  --brand-ink: #042f2e;
 }
 
 html,
@@ -13,8 +53,8 @@ body {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--surface);
+  color: var(--ink);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -45,17 +85,17 @@ body {
   list-style: decimal;
 }
 .card-markdown a {
-  color: var(--accent);
+  color: var(--brand);
   text-decoration: underline;
 }
 .card-markdown code {
-  background: rgba(148, 163, 184, 0.2);
+  background: color-mix(in oklab, var(--subtle) 30%, transparent);
   padding: 0.1em 0.3em;
   border-radius: 0.25rem;
   font-size: 0.85em;
 }
 .card-markdown pre {
-  background: rgba(15, 23, 42, 0.8);
+  background: color-mix(in oklab, var(--ink) 8%, transparent);
   padding: 0.75rem;
   border-radius: 0.5rem;
   overflow-x: auto;
@@ -65,7 +105,7 @@ body {
   padding: 0;
 }
 .card-markdown blockquote {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--brand);
   padding-left: 0.75rem;
-  color: #94a3b8;
+  color: var(--muted);
 }

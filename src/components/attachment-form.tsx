@@ -24,7 +24,7 @@ export function AttachmentForm({ action }: { action: Action }) {
         type="file"
         name="file"
         required
-        className="block w-full text-xs text-slate-400 file:mr-2 file:rounded file:border-0 file:bg-slate-700 file:px-2 file:py-1 file:text-xs file:text-slate-200 hover:file:bg-slate-600"
+        className="block w-full text-xs text-muted file:mr-2 file:rounded file:border-0 file:bg-edge file:px-2 file:py-1 file:text-xs file:text-ink hover:file:bg-edge"
       />
       <SubmitButton pendingLabel="Enviando…">Anexar</SubmitButton>
     </form>

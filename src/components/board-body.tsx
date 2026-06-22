@@ -57,7 +57,7 @@ export type ColumnT = {
 };
 
 const iconBtn =
-  "rounded px-1.5 py-0.5 text-xs text-slate-400 hover:bg-slate-700 hover:text-slate-100 disabled:opacity-30";
+  "rounded px-1.5 py-0.5 text-xs text-muted hover:bg-edge hover:text-ink disabled:opacity-30";
 
 /** Filtro de texto do quadro: casa por título e descrição (case-insensitive). */
 function cardMatches(card: CardT, q: string): boolean {
@@ -262,16 +262,16 @@ export function BoardBody({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex items-center gap-3 border-b border-slate-800 px-6 py-2">
+      <div className="flex items-center gap-3 border-b border-edge px-6 py-2">
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar cards…"
-          className="w-72 max-w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-sm outline-none placeholder:text-slate-500 focus:border-teal-400"
+          className="w-72 max-w-full rounded-lg border border-edge bg-panel px-3 py-1.5 text-sm outline-none placeholder:text-subtle focus:border-brand"
         />
         {matchCount !== null && (
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-subtle">
             {matchCount} resultado{matchCount === 1 ? "" : "s"}
           </span>
         )}
@@ -308,7 +308,7 @@ export function BoardBody({
 
       <DragOverlay>
         {activeCard ? (
-          <div className="rounded-lg border border-teal-400 bg-slate-800 p-2.5 text-sm shadow-lg">
+          <div className="rounded-lg border border-brand bg-elevated p-2.5 text-sm shadow-lg">
             {activeCard.title}
           </div>
         ) : null}
@@ -344,8 +344,8 @@ function ColumnView({
   });
 
   return (
-    <section className="flex max-h-full w-72 shrink-0 flex-col rounded-xl border border-slate-800 bg-slate-900/40">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-800 px-3 py-2">
+    <section className="flex max-h-full w-72 shrink-0 flex-col rounded-xl border border-edge bg-panel">
+      <div className="flex items-center justify-between gap-2 border-b border-edge px-3 py-2">
         {canWrite ? (
           <details className="group relative min-w-0 flex-1">
             <summary className="cursor-pointer list-none truncate text-sm font-semibold">
@@ -353,7 +353,7 @@ function ColumnView({
             </summary>
             <form
               action={renameColumn.bind(null, column.id)}
-              className="absolute z-20 mt-2 flex gap-2 rounded-lg border border-slate-700 bg-slate-900 p-2"
+              className="absolute z-20 mt-2 flex gap-2 rounded-lg border border-edge bg-elevated p-2"
             >
               <input
                 name="name"
@@ -367,7 +367,7 @@ function ColumnView({
         ) : (
           <span className="truncate text-sm font-semibold">{column.name}</span>
         )}
-        <span className="shrink-0 text-xs text-slate-500">
+        <span className="shrink-0 text-xs text-subtle">
           {query ? `${visibleCards.length}/${column.cards.length}` : column.cards.length}
         </span>
         {canWrite && (
@@ -396,7 +396,7 @@ function ColumnView({
         <div
           ref={setNodeRef}
           className={`flex-1 space-y-2 overflow-y-auto p-2 ${
-            isOver ? "bg-teal-500/5" : ""
+            isOver ? "bg-brand/5" : ""
           }`}
         >
           {visibleCards.map((card) => (
@@ -408,7 +408,7 @@ function ColumnView({
             />
           ))}
           {visibleCards.length === 0 && (
-            <p className="px-1 py-6 text-center text-xs text-slate-600">
+            <p className="px-1 py-6 text-center text-xs text-subtle">
               {query ? "Nenhum card corresponde" : "Solte cards aqui"}
             </p>
           )}
@@ -418,7 +418,7 @@ function ColumnView({
       {canWrite && (
         <form
           action={createCard.bind(null, column.id)}
-          className="border-t border-slate-800 p-2"
+          className="border-t border-edge p-2"
         >
           <input
             name="title"
@@ -462,7 +462,7 @@ function SortableCard({
     <article
       ref={setNodeRef}
       style={style}
-      className="rounded-lg border border-slate-700 bg-slate-800/70 p-2.5"
+      className="rounded-lg border border-edge bg-elevated p-2.5"
     >
       <div
         {...(canWrite ? { ...attributes, ...listeners } : {})}
@@ -483,7 +483,7 @@ function SortableCard({
         )}
         <p className="text-sm">{card.title}</p>
         {card.description && (
-          <p className="mt-1 line-clamp-2 text-xs text-slate-400">
+          <p className="mt-1 line-clamp-2 text-xs text-muted">
             {card.description}
           </p>
         )}
@@ -493,15 +493,15 @@ function SortableCard({
               <span
                 className={`inline-block rounded px-1.5 py-0.5 text-[10px] ${
                   due.overdue
-                    ? "bg-red-500/20 text-red-300"
-                    : "bg-slate-700 text-slate-300"
+                    ? "bg-red-500/20 text-red-700 dark:text-red-300"
+                    : "bg-edge text-ink"
                 }`}
               >
                 📅 {due.text}
               </span>
             )}
             {card.attachmentCount > 0 && (
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-muted">
                 📎 {card.attachmentCount}
               </span>
             )}
@@ -509,7 +509,7 @@ function SortableCard({
         )}
       </div>
 
-      <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-slate-700/60 pt-2">
+      <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-edge/60 pt-2">
         <Link href={href} className={iconBtn}>
           abrir
         </Link>
