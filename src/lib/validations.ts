@@ -20,5 +20,18 @@ export const addMemberSchema = z.object({
   role: z.enum(["ADMIN", "MEMBER", "VIEWER"]),
 });
 
+export const boardSchema = z.object({
+  name: z.string().trim().min(2, "Informe o nome do quadro."),
+});
+
+export const columnSchema = z.object({
+  name: z.string().trim().min(1, "Informe o nome da coluna."),
+});
+
+export const cardSchema = z.object({
+  title: z.string().trim().min(1, "Informe o título do card."),
+  description: z.string().trim().max(5000).optional().or(z.literal("")),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { addMember } from "@/app/actions/organizations";
+import { createBoard } from "@/app/actions/boards";
 import { AddMemberForm } from "@/components/add-member-form";
+import { CreateBoardForm } from "@/components/create-board-form";
 
 export default async function OrganizationPage({
   params,
@@ -30,8 +32,15 @@ export default async function OrganizationPage({
 
   const canManage =
     myMembership.role === "OWNER" || myMembership.role === "ADMIN";
+  const canWrite = myMembership.role !== "VIEWER";
+
+  const boards = await prisma.board.findMany({
+    where: { organizationId: org.id, archivedAt: null },
+    orderBy: { createdAt: "asc" },
+  });
 
   const boundAddMember = addMember.bind(null, org.id, org.slug);
+  const boundCreateBoard = createBoard.bind(null, org.id, org.slug);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -41,6 +50,33 @@ export default async function OrganizationPage({
 
       <h1 className="mt-4 text-2xl font-bold">{org.name}</h1>
       <p className="text-sm text-slate-500">/{org.slug}</p>
+
+      <section className="mt-8">
+        <h2 className="mb-3 text-sm font-semibold text-slate-300">
+          Quadros ({boards.length})
+        </h2>
+        {boards.length === 0 ? (
+          <p className="text-sm text-slate-400">Nenhum quadro ainda.</p>
+        ) : (
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {boards.map((b) => (
+              <li key={b.id}>
+                <Link
+                  href={`/orgs/${org.slug}/boards/${b.id}`}
+                  className="block rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-3 font-medium transition hover:border-teal-400"
+                >
+                  {b.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {canWrite && (
+          <div className="mt-4">
+            <CreateBoardForm action={boundCreateBoard} />
+          </div>
+        )}
+      </section>
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold text-slate-300">
