@@ -129,13 +129,19 @@ export default async function OrgSettingsPage({
         <h2 className="mb-1 text-sm font-semibold text-ink">
           Tokens de API ({apiTokens.length})
         </h2>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-1 text-xs text-muted">
           Acesso programático à API REST em{" "}
           <code className="rounded bg-edge px-1">/api/v1</code> com o header{" "}
           <code className="rounded bg-edge px-1">
             Authorization: Bearer &lt;token&gt;
           </code>
           .
+        </p>
+        <p className="mb-3 text-xs text-muted">
+          O mesmo token conecta agentes de IA via{" "}
+          <strong>servidor MCP</strong> em{" "}
+          <code className="rounded bg-edge px-1">/api/mcp</code> (ferramentas:
+          listar quadros, criar/mover card, comentar).
         </p>
 
         {apiTokens.length > 0 && (
