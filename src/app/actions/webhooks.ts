@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireOrgAdmin } from "@/lib/authz";
 import { generateWebhookSecret } from "@/lib/webhooks";
+import { WEBHOOK_EVENT_VALUES } from "@/lib/events";
 import { webhookSchema } from "@/lib/validations";
 
 export type FormState = { error?: string; ok?: boolean } | undefined;
@@ -28,11 +29,18 @@ export async function createWebhook(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
+  // Eventos selecionados (vazio = todos). Ignora valores fora da lista.
+  const events = formData
+    .getAll("events")
+    .map(String)
+    .filter((v) => WEBHOOK_EVENT_VALUES.includes(v));
+
   await prisma.webhook.create({
     data: {
       organizationId: orgId,
       url: parsed.data.url,
       secret: generateWebhookSecret(),
+      events,
     },
   });
 

@@ -14,6 +14,7 @@ import { CreateBoardForm } from "@/components/create-board-form";
 import { CreateWebhookForm } from "@/components/create-webhook-form";
 import { ConfirmButton } from "@/components/confirm-button";
 import { UserMenu } from "@/components/user-menu";
+import { eventLabel } from "@/lib/events";
 
 export default async function OrganizationPage({
   params,
@@ -174,7 +175,13 @@ export default async function OrganizationPage({
                       remover
                     </ConfirmButton>
                   </div>
-                  <p className="mt-1 truncate text-[11px] text-subtle">
+                  <p className="mt-1 text-[11px] text-muted">
+                    eventos:{" "}
+                    {w.events.length === 0
+                      ? "todos"
+                      : w.events.map(eventLabel).join(", ")}
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] text-subtle">
                     secret: <code>{w.secret}</code>
                   </p>
                 </li>

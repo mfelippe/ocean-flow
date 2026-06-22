@@ -28,9 +28,13 @@ export async function dispatchWebhooks(
   });
   if (!board) return;
 
-  const hooks = await prisma.webhook.findMany({
+  const allHooks = await prisma.webhook.findMany({
     where: { organizationId: board.organizationId, active: true },
   });
+  // events vazio = assina todos; senão, só os eventos listados.
+  const hooks = allHooks.filter(
+    (h) => h.events.length === 0 || h.events.includes(event),
+  );
   if (hooks.length === 0) return;
 
   const body = JSON.stringify({
