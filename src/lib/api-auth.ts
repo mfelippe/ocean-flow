@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
 const PREFIX = "ofw_";
 
@@ -25,7 +26,7 @@ export function generateApiToken(): {
  */
 export async function authenticateApiToken(
   request: Request,
-): Promise<{ organizationId: string } | null> {
+): Promise<{ organizationId: string; tokenId: string } | null> {
   const header = request.headers.get("authorization") ?? "";
   if (!header.startsWith("Bearer ")) return null;
 
@@ -41,18 +42,33 @@ export async function authenticateApiToken(
     .update({ where: { id: token.id }, data: { lastUsedAt: new Date() } })
     .catch(() => {});
 
-  return { organizationId: token.organizationId };
+  return { organizationId: token.organizationId, tokenId: token.id };
 }
 
 export function jsonError(status: number, message: string): NextResponse {
   return NextResponse.json({ error: message }, { status });
 }
 
-/** Autentica e retorna a org, ou uma resposta 401 pronta. */
+/**
+ * Aplica o rate limit ao token. Retorna `null` se ok, ou uma resposta `429`
+ * pronta (com headers de rate limit) se o orçamento estourou.
+ */
+export function enforceRateLimit(tokenId: string): NextResponse | null {
+  const result = checkRateLimit(`token:${tokenId}`);
+  if (result.ok) return null;
+  return NextResponse.json(
+    { error: "Limite de requisições excedido. Tente novamente em instantes." },
+    { status: 429, headers: rateLimitHeaders(result) },
+  );
+}
+
+/** Autentica, aplica rate limit e retorna a org — ou uma resposta 401/429. */
 export async function requireApiToken(
   request: Request,
-): Promise<{ organizationId: string } | NextResponse> {
+): Promise<{ organizationId: string; tokenId: string } | NextResponse> {
   const auth = await authenticateApiToken(request);
   if (!auth) return jsonError(401, "Token de API inválido ou ausente.");
+  const limited = enforceRateLimit(auth.tokenId);
+  if (limited) return limited;
   return auth;
 }

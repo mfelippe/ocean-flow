@@ -137,11 +137,22 @@ export default async function OrgSettingsPage({
           </code>
           .
         </p>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-1 text-xs text-muted">
           O mesmo token conecta agentes de IA via{" "}
           <strong>servidor MCP</strong> em{" "}
           <code className="rounded bg-edge px-1">/api/mcp</code> (ferramentas:
           listar quadros, criar/mover card, comentar).
+        </p>
+        <p className="mb-3 text-xs text-muted">
+          📖 Veja todas as rotas e teste-as na{" "}
+          <a
+            href="/api-docs"
+            target="_blank"
+            rel="noreferrer"
+            className="text-brand hover:underline"
+          >
+            documentação interativa da API →
+          </a>
         </p>
 
         {apiTokens.length > 0 && (

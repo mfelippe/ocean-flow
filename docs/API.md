@@ -2,6 +2,10 @@
 
 A API permite ler e manipular quadros e cards programaticamente. Base: `/api/v1`.
 
+> **Documentação interativa:** acesse **`/api-docs`** na sua instância para
+> explorar todas as rotas e testá-las no navegador (cole o token em
+> _Authorize_). A spec OpenAPI fica em **`/api/openapi.json`**.
+
 ## Autenticação
 
 Todas as rotas exigem um **token de API** no header:
@@ -15,6 +19,23 @@ OWNER/ADMIN). O valor em claro é exibido **uma única vez** na criação — gu
 Cada token dá acesso à **organização** que o gerou.
 
 Sem token válido, as rotas respondem `401`.
+
+## Rate limit
+
+Cada token tem um limite de requisições por janela de tempo (padrão:
+**120 req/min**). Ao exceder, a API responde `429` com:
+
+| Header | Significado |
+| ------ | ----------- |
+| `X-RateLimit-Limit` | limite por janela |
+| `X-RateLimit-Remaining` | requisições restantes na janela |
+| `X-RateLimit-Reset` | epoch (s) em que a janela reinicia |
+| `Retry-After` | segundos até liberar (apenas no `429`) |
+
+Configurável na instância via `API_RATE_LIMIT` (req por janela; `0` desliga) e
+`API_RATE_WINDOW_SECONDS` (tamanho da janela). O limite vale também para o
+servidor MCP (`/api/mcp`). Em deploy com múltiplas instâncias, o controle é
+por instância (in-memory).
 
 ## Endpoints
 
@@ -143,6 +164,7 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 | `400`  | Corpo inválido / campo faltando / id inválido |
 | `401`  | Token ausente ou inválido                    |
 | `404`  | Recurso não pertence à organização do token  |
+| `429`  | Rate limit excedido (veja `Retry-After`)     |
 
 Erros retornam `{ "error": "mensagem" }`.
 

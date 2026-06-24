@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticateApiToken } from "@/lib/api-auth";
+import { authenticateApiToken, enforceRateLimit } from "@/lib/api-auth";
 import { MCP_TOOLS, callTool } from "@/lib/mcp";
 
 const PROTOCOL_VERSION = "2025-06-18";
@@ -15,6 +15,12 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { jsonrpc: "2.0", id: null, error: { code: -32001, message: "Token de API inválido ou ausente." } },
       { status: 401 },
+    );
+  }
+  if (enforceRateLimit(auth.tokenId)) {
+    return NextResponse.json(
+      { jsonrpc: "2.0", id: null, error: { code: -32002, message: "Limite de requisições excedido." } },
+      { status: 429 },
     );
   }
 
