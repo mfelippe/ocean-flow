@@ -23,13 +23,19 @@ export default async function BoardPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; boardId: string }>;
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; ym?: string }>;
 }) {
   const { slug, boardId } = await params;
-  const { view: viewParam } = await searchParams;
+  const { view: viewParam, ym } = await searchParams;
   const view: BoardView = VALID_VIEWS.includes(viewParam as BoardView)
     ? (viewParam as BoardView)
     : "kanban";
+
+  // Mês exibido no calendário: ?ym=AAAA-MM (default = mês atual).
+  const now = new Date();
+  const ymMatch = /^(\d{4})-(\d{2})$/.exec(ym ?? "");
+  const calYear = ymMatch ? Number(ymMatch[1]) : now.getFullYear();
+  const calMonth = ymMatch ? Number(ymMatch[2]) - 1 : now.getMonth();
   const { board, role, user } = await getBoardContext(boardId);
   if (board.organization.slug !== slug || board.archivedAt) notFound();
 
@@ -200,7 +206,14 @@ export default async function BoardPage({
             />
           )}
           {view === "calendar" && (
-            <BoardCalendarView cards={allCards} slug={slug} boardId={boardId} />
+            <BoardCalendarView
+              cards={allCards}
+              slug={slug}
+              boardId={boardId}
+              year={calYear}
+              month={calMonth}
+              basePath={`/orgs/${slug}/boards/${boardId}`}
+            />
           )}
         </div>
       )}
