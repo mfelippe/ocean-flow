@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/authz";
-import { AdminUserActions } from "@/components/admin-user-actions";
+import { AdminUsersTable } from "@/components/admin-users-table";
 import { UserMenu } from "@/components/user-menu";
 
 export const metadata = { title: "Ocean Flow — Admin" };
@@ -72,36 +72,7 @@ export default async function AdminPage() {
           impede o login imediatamente.
         </p>
 
-        <ul className="divide-y divide-edge overflow-hidden rounded-xl border border-edge">
-          {users.map((u) => (
-            <li
-              key={u.id}
-              className="flex items-center justify-between gap-3 bg-panel/60 px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {u.name}
-                  {u.isSuperAdmin && (
-                    <span className="ml-2 rounded bg-brand/15 px-1.5 py-0.5 text-[10px] uppercase text-brand">
-                      admin
-                    </span>
-                  )}
-                  {u.blockedAt && (
-                    <span className="ml-2 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] uppercase text-red-400">
-                      bloqueado
-                    </span>
-                  )}
-                </p>
-                <p className="truncate text-xs text-subtle">{u.email}</p>
-              </div>
-              <AdminUserActions
-                userId={u.id}
-                blocked={!!u.blockedAt}
-                isSelf={u.id === admin.id}
-              />
-            </li>
-          ))}
-        </ul>
+        <AdminUsersTable users={users} adminId={admin.id} />
       </section>
     </main>
   );
