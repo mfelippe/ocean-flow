@@ -5,9 +5,11 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireBoardManage, requireBoardWrite, requireOrgWrite } from "@/lib/authz";
 import { boardSchema, columnSchema, cardSchema } from "@/lib/validations";
+import bcrypt from "bcryptjs";
 import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
 import { runAutomations } from "@/lib/automations";
+import { deleteUpload } from "@/lib/storage";
 
 export type FormState = { error?: string } | undefined;
 
@@ -82,6 +84,45 @@ export async function unarchiveBoard(boardId: string): Promise<void> {
     data: { archivedAt: null },
   });
   revalidatePath(`/orgs/${board.organization.slug}`);
+}
+
+export type DeleteBoardState = { error?: string } | undefined;
+
+/**
+ * Exclui o quadro PERMANENTEMENTE (sem recuperação): cascateia colunas, cards,
+ * comentários, anexos, labels, automações, etc. e remove os arquivos do disco.
+ * Exige a SENHA do admin como confirmação.
+ */
+export async function deleteBoard(
+  boardId: string,
+  _prev: DeleteBoardState,
+  formData: FormData,
+): Promise<DeleteBoardState> {
+  const { user, board } = await requireBoardManage(boardId);
+
+  const password = String(formData.get("password") ?? "");
+  if (!password) return { error: "Digite sua senha para confirmar." };
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { passwordHash: true },
+  });
+  if (!dbUser || !(await bcrypt.compare(password, dbUser.passwordHash))) {
+    return { error: "Senha incorreta." };
+  }
+
+  // Coleta os arquivos de anexos do quadro antes de apagar (para limpar o disco).
+  const attachments = await prisma.attachment.findMany({
+    where: { card: { column: { boardId } } },
+    select: { filePath: true },
+  });
+
+  const slug = board.organization.slug;
+  await prisma.board.delete({ where: { id: boardId } }); // cascade em todo o resto
+  await Promise.allSettled(attachments.map((a) => deleteUpload(a.filePath)));
+
+  revalidatePath(`/orgs/${slug}`);
+  redirect(`/orgs/${slug}`);
 }
 
 // ─── Column ──────────────────────────────────────────────────────────

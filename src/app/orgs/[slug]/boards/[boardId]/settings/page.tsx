@@ -20,12 +20,15 @@ import { AddBoardMemberForm } from "@/components/add-board-member-form";
 import { CreateCustomFieldForm } from "@/components/create-custom-field-form";
 import { AutomationForm } from "@/components/automation-form";
 import { unarchiveCard, deleteCardPermanent } from "@/app/actions/cards";
+import { archiveBoard } from "@/app/actions/boards";
 import {
   BoardMembersTable,
   CustomFieldsTable,
   AutomationsTable,
   ArchivedCardsTable,
 } from "@/components/settings-tables";
+import { ConfirmButton } from "@/components/confirm-button";
+import { DeleteBoardForm } from "@/components/delete-board-form";
 import { UserMenu } from "@/components/user-menu";
 
 const FIELD_TYPE_LABEL: Record<string, string> = {
@@ -286,6 +289,34 @@ export default async function BoardAccessPage({
             Nenhum card arquivado.
           </p>
         )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-1 text-sm font-semibold text-ink">Zona de perigo</h2>
+        <p className="mb-3 text-xs text-muted">
+          Arquivar tira o quadro da lista (pode ser desfeito). Excluir remove
+          tudo para sempre.
+        </p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-lg border border-edge bg-panel/60 p-3">
+            <div>
+              <p className="text-sm font-medium">Arquivar quadro</p>
+              <p className="text-xs text-muted">
+                Sai da lista da organização; admins podem desarquivar depois.
+              </p>
+            </div>
+            <ConfirmButton
+              action={archiveBoard.bind(null, boardId)}
+              triggerClassName="shrink-0 rounded-lg border border-edge px-3 py-1.5 text-sm text-ink hover:bg-edge"
+              title="Arquivar quadro?"
+              description={`O quadro "${board.name}" será arquivado e sairá da lista da organização.`}
+              confirmLabel="Arquivar"
+            >
+              Arquivar
+            </ConfirmButton>
+          </div>
+          <DeleteBoardForm boardId={boardId} boardName={board.name} />
+        </div>
       </section>
     </main>
   );

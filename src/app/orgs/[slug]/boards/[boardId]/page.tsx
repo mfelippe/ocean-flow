@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getBoardContext } from "@/lib/authz";
-import { archiveBoard, renameBoard } from "@/app/actions/boards";
+import { renameBoard } from "@/app/actions/boards";
 import { BoardBody } from "@/components/board-body";
 import {
   BoardViewSwitcher,
@@ -13,7 +13,6 @@ import { BoardTableView } from "@/components/board-table-view";
 import { BoardCalendarView } from "@/components/board-calendar-view";
 import { BoardMetricsSheet } from "@/components/board-metrics-sheet";
 import { UserMenu } from "@/components/user-menu";
-import { ConfirmButton } from "@/components/confirm-button";
 import { inputClass } from "@/components/form";
 
 const VALID_VIEWS: BoardView[] = ["kanban", "list", "table", "calendar"];
@@ -161,17 +160,6 @@ export default async function BoardPage({
             >
               ⚙️ Configurações
             </Link>
-          )}
-          {canManage && (
-            <ConfirmButton
-              action={archiveBoard.bind(null, boardId)}
-              triggerClassName="text-xs text-subtle hover:text-red-400"
-              title="Arquivar quadro?"
-              description={`O quadro "${board.name}" será arquivado e sairá da lista da organização.`}
-              confirmLabel="Arquivar quadro"
-            >
-              Arquivar quadro
-            </ConfirmButton>
           )}
           <UserMenu name={user.name ?? ""} email={user.email ?? ""} />
         </div>
