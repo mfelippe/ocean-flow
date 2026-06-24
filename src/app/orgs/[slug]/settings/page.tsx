@@ -144,14 +144,23 @@ export default async function OrgSettingsPage({
           listar quadros, criar/mover card, comentar).
         </p>
         <p className="mb-3 text-xs text-muted">
-          📖 Veja todas as rotas e teste-as na{" "}
+          📖 Documentação:{" "}
           <a
             href="/api-docs"
             target="_blank"
             rel="noreferrer"
             className="text-brand hover:underline"
           >
-            documentação interativa da API →
+            API REST (interativa) →
+          </a>{" "}
+          ·{" "}
+          <a
+            href="/mcp-docs"
+            target="_blank"
+            rel="noreferrer"
+            className="text-brand hover:underline"
+          >
+            servidor MCP →
           </a>
         </p>
 

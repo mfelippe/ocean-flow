@@ -31,14 +31,23 @@ export function CreateTokenForm({ action }: { action: Action }) {
             {state.token}
           </code>
           <p className="mt-2 text-xs text-muted">
-            Veja as rotas disponíveis e teste com este token na{" "}
+            Use este token na{" "}
             <a
               href="/api-docs"
               target="_blank"
               rel="noreferrer"
               className="font-medium text-brand hover:underline"
             >
-              documentação interativa →
+              API REST →
+            </a>{" "}
+            ou conecte um agente de IA pelo{" "}
+            <a
+              href="/mcp-docs"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-brand hover:underline"
+            >
+              servidor MCP →
             </a>
           </p>
         </div>

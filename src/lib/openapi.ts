@@ -26,7 +26,9 @@ export function getOpenApiDocument() {
         "organização que o gerou.\n\n" +
         "**Rate limit:** por padrão 120 requisições por minuto por token " +
         "(configurável na instância). Ao exceder, a API responde `429` com os " +
-        "headers `X-RateLimit-*` e `Retry-After`.",
+        "headers `X-RateLimit-*` e `Retry-After`.\n\n" +
+        "**Agentes de IA:** o mesmo token funciona no servidor MCP — veja " +
+        "[/mcp-docs](/mcp-docs).",
     },
     servers: [{ url: "/", description: "Esta instância" }],
     tags: [

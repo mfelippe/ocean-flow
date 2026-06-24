@@ -8,6 +8,9 @@ que agentes de IA (Claude e outros clientes MCP) interajam com seus quadros.
 - **Autenticação:** `Authorization: Bearer <token>` — o **mesmo token de API**
   (veja [API.md](API.md)); o token escopa o acesso à sua organização.
 
+> **Referência navegável:** acesse **`/mcp-docs`** na sua instância para ver a
+> lista de ferramentas (gerada de `tools/list`) e o snippet de conexão.
+
 ## Conectando um cliente
 
 Configure o cliente MCP com a URL `https://seu-host/api/mcp` e o header

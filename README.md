@@ -93,7 +93,7 @@ API** (`Authorization: Bearer <token>`).
 - **API REST** — ler/criar/atualizar quadros e cards. → [docs/API.md](docs/API.md)
   · documentação interativa em **`/api-docs`**.
 - **Servidor MCP** — exponha o Kanban como ferramentas para agentes de IA.
-  → [docs/MCP.md](docs/MCP.md)
+  → [docs/MCP.md](docs/MCP.md) · referência navegável em **`/mcp-docs`**.
 - **Webhooks** — receba eventos (card criado/movido, comentário, anexo…) com
   payload assinado. → [docs/WEBHOOKS.md](docs/WEBHOOKS.md)
 - **Automações** — regras gatilho → ação por quadro (mover, label, comentar,
