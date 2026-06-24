@@ -30,6 +30,17 @@ export function CreateTokenForm({ action }: { action: Action }) {
           <code className="mt-1 block break-all text-xs text-ink">
             {state.token}
           </code>
+          <p className="mt-2 text-xs text-muted">
+            Veja as rotas disponíveis e teste com este token na{" "}
+            <a
+              href="/api-docs"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-brand hover:underline"
+            >
+              documentação interativa →
+            </a>
+          </p>
         </div>
       )}
 
