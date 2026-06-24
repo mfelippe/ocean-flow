@@ -4,36 +4,59 @@ import { prisma } from "@/lib/prisma";
 import { getBoardContext } from "@/lib/authz";
 import { archiveBoard, renameBoard } from "@/app/actions/boards";
 import { BoardBody } from "@/components/board-body";
+import {
+  BoardViewSwitcher,
+  type BoardView,
+} from "@/components/board-view-switcher";
+import { BoardListView } from "@/components/board-list-view";
+import { BoardTableView } from "@/components/board-table-view";
+import { BoardCalendarView } from "@/components/board-calendar-view";
 import { UserMenu } from "@/components/user-menu";
 import { ConfirmButton } from "@/components/confirm-button";
 import { inputClass } from "@/components/form";
 
+const VALID_VIEWS: BoardView[] = ["kanban", "list", "table", "calendar"];
+
 export default async function BoardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; boardId: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
   const { slug, boardId } = await params;
+  const { view: viewParam } = await searchParams;
+  const view: BoardView = VALID_VIEWS.includes(viewParam as BoardView)
+    ? (viewParam as BoardView)
+    : "kanban";
   const { board, role, user } = await getBoardContext(boardId);
   if (board.organization.slug !== slug || board.archivedAt) notFound();
 
   const canWrite = role !== "VIEWER";
   const canManage = role === "OWNER" || role === "ADMIN";
 
-  const columns = await prisma.column.findMany({
-    where: { boardId },
-    orderBy: { rank: "asc" },
-    include: {
-      cards: {
-        where: { archivedAt: null },
-        orderBy: { rank: "asc" },
-        include: {
-          labels: { include: { label: true } },
-          _count: { select: { attachments: true } },
+  const [columns, boardFields] = await Promise.all([
+    prisma.column.findMany({
+      where: { boardId },
+      orderBy: { rank: "asc" },
+      include: {
+        cards: {
+          where: { archivedAt: null },
+          orderBy: { rank: "asc" },
+          include: {
+            labels: { include: { label: true } },
+            fieldValues: { include: { field: true } },
+            _count: { select: { attachments: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.customField.findMany({
+      where: { boardId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   const initialColumns = columns.map((c) => ({
     id: c.id,
@@ -53,6 +76,19 @@ export default async function BoardPage({
       attachmentCount: card._count.attachments,
     })),
   }));
+
+  // Lista achatada (para a visão de tabela), com valores dos campos por card.
+  const allCards = columns.flatMap((c) =>
+    c.cards.map((card) => ({
+      id: card.id,
+      title: card.title,
+      columnName: c.name,
+      dueDate: card.dueDate ? card.dueDate.toISOString() : null,
+      fields: Object.fromEntries(
+        card.fieldValues.map((fv) => [fv.field.name, fv.value]),
+      ) as Record<string, string>,
+    })),
+  );
 
   return (
     <main className="flex h-screen flex-col">
@@ -112,12 +148,38 @@ export default async function BoardPage({
         </div>
       </header>
 
-      <BoardBody
-        initialColumns={initialColumns}
-        canWrite={canWrite}
-        boardId={boardId}
-        slug={slug}
-      />
+      <div className="flex items-center border-b border-edge px-6 py-2">
+        <BoardViewSwitcher
+          basePath={`/orgs/${slug}/boards/${boardId}`}
+          current={view}
+        />
+      </div>
+
+      {view === "kanban" ? (
+        <BoardBody
+          initialColumns={initialColumns}
+          canWrite={canWrite}
+          boardId={boardId}
+          slug={slug}
+        />
+      ) : (
+        <div className="flex-1 overflow-auto">
+          {view === "list" && (
+            <BoardListView columns={initialColumns} slug={slug} boardId={boardId} />
+          )}
+          {view === "table" && (
+            <BoardTableView
+              cards={allCards}
+              customFields={boardFields}
+              slug={slug}
+              boardId={boardId}
+            />
+          )}
+          {view === "calendar" && (
+            <BoardCalendarView cards={allCards} slug={slug} boardId={boardId} />
+          )}
+        </div>
+      )}
     </main>
   );
 }
