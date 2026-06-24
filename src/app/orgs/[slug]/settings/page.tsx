@@ -10,7 +10,7 @@ import {
 import { createApiToken, revokeApiToken } from "@/app/actions/api-tokens";
 import { CreateWebhookForm } from "@/components/create-webhook-form";
 import { CreateTokenForm } from "@/components/create-token-form";
-import { ConfirmButton } from "@/components/confirm-button";
+import { WebhooksTable, TokensTable } from "@/components/settings-tables";
 import { UserMenu } from "@/components/user-menu";
 import { eventLabel } from "@/lib/events";
 
@@ -48,6 +48,22 @@ export default async function OrgSettingsPage({
   const boundCreateWebhook = createWebhook.bind(null, org.id);
   const boundCreateToken = createApiToken.bind(null, org.id);
 
+  const webhookRows = webhooks.map((w) => ({
+    id: w.id,
+    url: w.url,
+    active: w.active,
+    eventsText: w.events.length === 0 ? "todos" : w.events.map(eventLabel).join(", "),
+    secret: w.secret,
+  }));
+  const tokenRows = apiTokens.map((t) => ({
+    id: t.id,
+    name: t.name,
+    prefix: t.prefix,
+    lastUsedText: t.lastUsedAt
+      ? `usado em ${t.lastUsedAt.toLocaleDateString("pt-BR")}`
+      : "nunca usado",
+  }));
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <div className="flex items-center justify-between">
@@ -76,50 +92,13 @@ export default async function OrgSettingsPage({
         </p>
 
         {webhooks.length > 0 && (
-          <ul className="mb-4 space-y-2">
-            {webhooks.map((w) => (
-              <li
-                key={w.id}
-                className="rounded-xl border border-edge bg-panel/60 p-3"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {w.url}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                      w.active ? "bg-brand/15 text-brand" : "bg-edge text-muted"
-                    }`}
-                  >
-                    {w.active ? "ativo" : "inativo"}
-                  </span>
-                  <form action={toggleWebhook.bind(null, w.id)}>
-                    <button className="shrink-0 text-xs text-muted hover:text-brand">
-                      {w.active ? "desativar" : "ativar"}
-                    </button>
-                  </form>
-                  <ConfirmButton
-                    action={deleteWebhook.bind(null, w.id)}
-                    triggerClassName="shrink-0 text-xs text-subtle hover:text-red-400"
-                    title="Remover webhook?"
-                    description="A URL deixará de receber eventos. Esta ação não pode ser desfeita."
-                    confirmLabel="Remover"
-                  >
-                    remover
-                  </ConfirmButton>
-                </div>
-                <p className="mt-1 text-[11px] text-muted">
-                  eventos:{" "}
-                  {w.events.length === 0
-                    ? "todos"
-                    : w.events.map(eventLabel).join(", ")}
-                </p>
-                <p className="mt-0.5 truncate text-[11px] text-subtle">
-                  secret: <code>{w.secret}</code>
-                </p>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-4">
+            <WebhooksTable
+              webhooks={webhookRows}
+              onToggle={toggleWebhook}
+              onDelete={deleteWebhook}
+            />
+          </div>
         )}
 
         <CreateWebhookForm action={boundCreateWebhook} />
@@ -165,33 +144,9 @@ export default async function OrgSettingsPage({
         </p>
 
         {apiTokens.length > 0 && (
-          <ul className="mb-4 space-y-2">
-            {apiTokens.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-edge bg-panel/60 px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm">{t.name}</p>
-                  <p className="text-[11px] text-subtle">
-                    <code>{t.prefix}…</code> ·{" "}
-                    {t.lastUsedAt
-                      ? `usado em ${t.lastUsedAt.toLocaleDateString("pt-BR")}`
-                      : "nunca usado"}
-                  </p>
-                </div>
-                <ConfirmButton
-                  action={revokeApiToken.bind(null, t.id)}
-                  triggerClassName="shrink-0 text-xs text-subtle hover:text-red-400"
-                  title="Revogar token?"
-                  description="Aplicações que usam este token perderão o acesso imediatamente."
-                  confirmLabel="Revogar"
-                >
-                  revogar
-                </ConfirmButton>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-4">
+            <TokensTable tokens={tokenRows} onRevoke={revokeApiToken} />
+          </div>
         )}
 
         <CreateTokenForm action={boundCreateToken} />

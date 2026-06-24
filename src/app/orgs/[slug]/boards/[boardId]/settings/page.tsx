@@ -19,7 +19,11 @@ import {
 import { AddBoardMemberForm } from "@/components/add-board-member-form";
 import { CreateCustomFieldForm } from "@/components/create-custom-field-form";
 import { AutomationForm } from "@/components/automation-form";
-import { ConfirmButton } from "@/components/confirm-button";
+import {
+  BoardMembersTable,
+  CustomFieldsTable,
+  AutomationsTable,
+} from "@/components/settings-tables";
 import { UserMenu } from "@/components/user-menu";
 
 const FIELD_TYPE_LABEL: Record<string, string> = {
@@ -116,6 +120,28 @@ export default async function BoardAccessPage({
   const boundCreateField = createCustomField.bind(null, boardId);
   const boundCreateAutomation = createAutomation.bind(null, boardId);
 
+  const memberRows = members.map((m) => ({
+    id: m.id,
+    name: m.user.name,
+    email: m.user.email,
+    role: m.role,
+  }));
+  const fieldRows = customFields.map((f) => ({
+    id: f.id,
+    name: f.name,
+    typeLabel: FIELD_TYPE_LABEL[f.type] ?? f.type,
+  }));
+  const automationRows = automations.map((a) => ({
+    id: a.id,
+    name: a.name,
+    enabled: a.enabled,
+    triggerText:
+      a.trigger === "CARD_CREATED"
+        ? `Card criado${a.triggerColumn ? ` em "${a.triggerColumn.name}"` : ""}`
+        : `Card movido para "${a.triggerColumn?.name ?? "?"}"`,
+    actionsText: describeActions(a.actions),
+  }));
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <div className="flex items-center justify-between">
@@ -168,33 +194,9 @@ export default async function BoardAccessPage({
         </p>
 
         {members.length > 0 && (
-          <ul className="mb-4 divide-y divide-edge overflow-hidden rounded-xl border border-edge">
-            {members.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center justify-between bg-panel/60 px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-medium">{m.user.name}</p>
-                  <p className="text-xs text-subtle">{m.user.email}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs uppercase tracking-wide text-muted">
-                    {m.role}
-                  </span>
-                  <ConfirmButton
-                    action={removeBoardMember.bind(null, m.id)}
-                    triggerClassName="text-xs text-subtle hover:text-red-400"
-                    title="Remover do quadro?"
-                    description={`${m.user.name} perderá o acesso específico a este quadro.`}
-                    confirmLabel="Remover"
-                  >
-                    remover
-                  </ConfirmButton>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-4">
+            <BoardMembersTable members={memberRows} onRemove={removeBoardMember} />
+          </div>
         )}
 
         <AddBoardMemberForm action={boundAddMember} />
@@ -210,30 +212,9 @@ export default async function BoardAccessPage({
         </p>
 
         {customFields.length > 0 && (
-          <ul className="mb-4 divide-y divide-edge overflow-hidden rounded-xl border border-edge">
-            {customFields.map((f) => (
-              <li
-                key={f.id}
-                className="flex items-center justify-between bg-panel/60 px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-medium">{f.name}</p>
-                  <p className="text-xs text-subtle">
-                    {FIELD_TYPE_LABEL[f.type] ?? f.type}
-                  </p>
-                </div>
-                <ConfirmButton
-                  action={deleteCustomField.bind(null, f.id)}
-                  triggerClassName="text-xs text-subtle hover:text-red-400"
-                  title="Excluir campo?"
-                  description={`O campo "${f.name}" e seus valores em todos os cards serão removidos.`}
-                  confirmLabel="Excluir"
-                >
-                  excluir
-                </ConfirmButton>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-4">
+            <CustomFieldsTable fields={fieldRows} onDelete={deleteCustomField} />
+          </div>
         )}
 
         <CreateCustomFieldForm action={boundCreateField} />
@@ -250,48 +231,13 @@ export default async function BoardAccessPage({
         </p>
 
         {automations.length > 0 && (
-          <ul className="mb-4 divide-y divide-edge overflow-hidden rounded-xl border border-edge">
-            {automations.map((a) => (
-              <li
-                key={a.id}
-                className="flex items-center justify-between gap-3 bg-panel/60 px-4 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
-                    {a.name}
-                    {!a.enabled && (
-                      <span className="ml-2 rounded bg-edge px-1.5 py-0.5 text-[10px] uppercase text-subtle">
-                        pausada
-                      </span>
-                    )}
-                  </p>
-                  <p className="truncate text-xs text-subtle">
-                    {a.trigger === "CARD_CREATED"
-                      ? `Card criado${a.triggerColumn ? ` em "${a.triggerColumn.name}"` : ""}`
-                      : `Card movido para "${a.triggerColumn?.name ?? "?"}"`}
-                    {" → "}
-                    {describeActions(a.actions)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <form action={toggleAutomation.bind(null, a.id)}>
-                    <button className="text-xs text-muted hover:text-brand">
-                      {a.enabled ? "pausar" : "ativar"}
-                    </button>
-                  </form>
-                  <ConfirmButton
-                    action={deleteAutomation.bind(null, a.id)}
-                    triggerClassName="text-xs text-subtle hover:text-red-400"
-                    title="Excluir automação?"
-                    description={`A automação "${a.name}" será removida permanentemente.`}
-                    confirmLabel="Excluir"
-                  >
-                    excluir
-                  </ConfirmButton>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-4">
+            <AutomationsTable
+              automations={automationRows}
+              onToggle={toggleAutomation}
+              onDelete={deleteAutomation}
+            />
+          </div>
         )}
 
         {columns.length === 0 ? (
