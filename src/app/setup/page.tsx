@@ -2,6 +2,10 @@ import { redirect } from "next/navigation";
 import { needsSetup } from "@/app/actions/setup";
 import { SetupForm } from "@/components/setup-form";
 
+// Consulta o banco (needsSetup) e reflete estado ao vivo — nunca pré-renderizar
+// no build (senão falha sem DATABASE_URL).
+export const dynamic = "force-dynamic";
+
 // Tela de primeiro uso (estilo Uptime Kuma): cria o admin da instância e a
 // primeira organização. Se a instância já tem usuários, sai para o login.
 export default async function SetupPage() {

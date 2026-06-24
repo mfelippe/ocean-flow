@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { needsSetup } from "@/app/actions/setup";
 
+// Consulta o banco (needsSetup) — não pré-renderizar no build.
+export const dynamic = "force-dynamic";
+
 export default async function AuthLayout({
   children,
 }: {
