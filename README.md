@@ -52,12 +52,27 @@ mkdir ocean-flow && cd ocean-flow
 curl -O https://raw.githubusercontent.com/mfelippe/ocean-flow/main/docker-compose.release.yml
 ```
 
-**2. Crie o arquivo `.env`** (o comando abaixo já gera o `AUTH_SECRET`):
+**2. Crie o arquivo `.env`** (os comandos abaixo já geram o `AUTH_SECRET`).
+Escolha **uma** das opções de banco:
+
+**Opção A — banco embutido (padrão, mais simples):** não precisa de
+`DATABASE_URL`; o compose sobe um PostgreSQL junto.
 
 ```bash
 cat > .env <<EOF
 AUTH_SECRET=$(openssl rand -base64 32)
 AUTH_URL=http://localhost:3000
+EOF
+```
+
+**Opção B — Postgres externo/gerenciado:** aponte `DATABASE_URL` para o seu
+banco (precisa ser `postgresql://…`).
+
+```bash
+cat > .env <<EOF
+AUTH_SECRET=$(openssl rand -base64 32)
+AUTH_URL=http://localhost:3000
+DATABASE_URL=postgresql://usuario:senha@host:5432/oceanflow?schema=public
 EOF
 ```
 
