@@ -11,6 +11,7 @@ import { createApiToken, revokeApiToken } from "@/app/actions/api-tokens";
 import { CreateWebhookForm } from "@/components/create-webhook-form";
 import { CreateTokenForm } from "@/components/create-token-form";
 import { WebhooksTable, TokensTable } from "@/components/settings-tables";
+import { DeleteOrgForm } from "@/components/delete-org-form";
 import { UserMenu } from "@/components/user-menu";
 import { eventLabel } from "@/lib/events";
 
@@ -33,6 +34,7 @@ export default async function OrgSettingsPage({
   if (!membership || (membership.role !== "OWNER" && membership.role !== "ADMIN")) {
     notFound();
   }
+  const isOwner = membership.role === "OWNER";
 
   const [webhooks, apiTokens] = await Promise.all([
     prisma.webhook.findMany({
@@ -151,6 +153,17 @@ export default async function OrgSettingsPage({
 
         <CreateTokenForm action={boundCreateToken} />
       </section>
+
+      {isOwner && (
+        <section className="mt-8">
+          <h2 className="mb-1 text-sm font-semibold text-ink">Zona de perigo</h2>
+          <p className="mb-3 text-xs text-muted">
+            Excluir a organização remove tudo para sempre, para todos os
+            membros. Apenas o OWNER pode fazer isto.
+          </p>
+          <DeleteOrgForm orgId={org.id} orgName={org.name} />
+        </section>
+      )}
     </main>
   );
 }

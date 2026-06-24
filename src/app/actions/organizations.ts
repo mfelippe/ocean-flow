@@ -2,12 +2,58 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { uniqueOrgSlug } from "@/lib/slug";
+import { deleteUpload } from "@/lib/storage";
 import { addMemberSchema, createOrgSchema } from "@/lib/validations";
 
 export type FormState = { error?: string; success?: string } | undefined;
+export type DeleteOrgState = { error?: string } | undefined;
+
+/**
+ * Exclui a organização PERMANENTEMENTE (sem recuperação): cascateia quadros,
+ * colunas, cards, membros, webhooks, tokens, etc. e remove os arquivos de
+ * anexo do disco. Restrita ao OWNER e confirmada por SENHA.
+ */
+export async function deleteOrganization(
+  orgId: string,
+  _prev: DeleteOrgState,
+  formData: FormData,
+): Promise<DeleteOrgState> {
+  const user = await requireUser();
+  const membership = await prisma.membership.findUnique({
+    where: { userId_organizationId: { userId: user.id, organizationId: orgId } },
+  });
+  // Só o OWNER pode excluir a organização inteira.
+  if (!membership || membership.role !== "OWNER") {
+    return { error: "Apenas o OWNER pode excluir a organização." };
+  }
+
+  const password = String(formData.get("password") ?? "");
+  if (!password) return { error: "Digite sua senha para confirmar." };
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { passwordHash: true },
+  });
+  if (!dbUser || !(await bcrypt.compare(password, dbUser.passwordHash))) {
+    return { error: "Senha incorreta." };
+  }
+
+  // Coleta os arquivos de anexos de todos os quadros da org antes de apagar.
+  const attachments = await prisma.attachment.findMany({
+    where: { card: { column: { board: { organizationId: orgId } } } },
+    select: { filePath: true },
+  });
+
+  await prisma.organization.delete({ where: { id: orgId } }); // cascade total
+  await Promise.allSettled(attachments.map((a) => deleteUpload(a.filePath)));
+
+  revalidatePath("/");
+  redirect("/");
+}
 
 export async function createOrganization(
   _prevState: FormState,
