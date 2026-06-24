@@ -94,7 +94,7 @@ export default async function BoardPage({
               href={`/orgs/${slug}/boards/${boardId}/settings`}
               className="text-xs text-muted hover:text-brand"
             >
-              Acesso
+              ⚙️ Configurações
             </Link>
           )}
           {canWrite && (

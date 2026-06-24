@@ -28,12 +28,24 @@ export async function createBoard(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  // Colunas padrão (ranks fracionários crescentes) — quadro já nasce usável.
+  const r1 = rankBetween(null, null);
+  const r2 = rankBetween(r1, null);
+  const r3 = rankBetween(r2, null);
+
   // Quem cria vira ADMIN do quadro (mantém acesso mesmo se virar PRIVATE).
   const board = await prisma.board.create({
     data: {
       organizationId: orgId,
       name: parsed.data.name,
       members: { create: { userId: user.id, role: "ADMIN" } },
+      columns: {
+        create: [
+          { name: "A Fazer", rank: r1 },
+          { name: "Em Progresso", rank: r2 },
+          { name: "Concluído", rank: r3 },
+        ],
+      },
     },
   });
   redirect(boardPath(slug, board.id));

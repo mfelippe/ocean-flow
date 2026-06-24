@@ -128,7 +128,7 @@ export default async function BoardAccessPage({
         <UserMenu name={user.name ?? ""} email={user.email ?? ""} />
       </div>
 
-      <h1 className="mt-4 text-2xl font-bold">Acesso ao quadro</h1>
+      <h1 className="mt-4 text-2xl font-bold">⚙️ Configurações do quadro</h1>
       <p className="text-sm text-muted">{board.name}</p>
 
       <section className="mt-8">
