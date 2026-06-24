@@ -7,6 +7,7 @@ import { requireBoardWrite, requireOrgWrite } from "@/lib/authz";
 import { boardSchema, columnSchema, cardSchema } from "@/lib/validations";
 import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
+import { runAutomations } from "@/lib/automations";
 
 export type FormState = { error?: string } | undefined;
 
@@ -164,6 +165,12 @@ export async function createCard(
     type: "CARD_CREATED",
     payload: { title: created.title },
   });
+  runAutomations({
+    boardId: column.boardId,
+    trigger: "CARD_CREATED",
+    columnId,
+    cardId: created.id,
+  });
   revalidatePath(boardPath(board.organization.slug, column.boardId));
 }
 
@@ -224,6 +231,12 @@ export async function moveCardTo(
       actorId: user.id,
       type: "CARD_MOVED",
       payload: { from: card.column.name, to: target.name },
+    });
+    runAutomations({
+      boardId: card.column.boardId,
+      trigger: "CARD_MOVED_TO_COLUMN",
+      columnId: toColumnId,
+      cardId,
     });
   }
   revalidatePath(boardPath(board.organization.slug, card.column.boardId));

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
+import { runAutomations } from "@/lib/automations";
 
 /**
  * Operações de Kanban escopadas a uma organização, reutilizadas pela API
@@ -83,6 +84,12 @@ export async function opCreateCard(
     type: "CARD_CREATED",
     payload: { title: card.title, via: "mcp" },
   });
+  runAutomations({
+    boardId: input.boardId,
+    trigger: "CARD_CREATED",
+    columnId: column.id,
+    cardId: card.id,
+  });
 
   return { card: { id: card.id, title: card.title, columnId: card.columnId } };
 }
@@ -119,6 +126,12 @@ export async function opMoveCard(
       cardId: card.id,
       type: "CARD_MOVED",
       payload: { from: card.column.name, to: target.name, via: "mcp" },
+    });
+    runAutomations({
+      boardId: card.column.boardId,
+      trigger: "CARD_MOVED_TO_COLUMN",
+      columnId: target.id,
+      cardId: card.id,
     });
   }
 

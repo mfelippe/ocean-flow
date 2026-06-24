@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonError, requireApiToken } from "@/lib/api-auth";
 import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
+import { runAutomations } from "@/lib/automations";
 import { cardSchema } from "@/lib/validations";
 
 export async function POST(
@@ -63,6 +64,12 @@ export async function POST(
     cardId: card.id,
     type: "CARD_CREATED",
     payload: { title: card.title, via: "api" },
+  });
+  runAutomations({
+    boardId,
+    trigger: "CARD_CREATED",
+    columnId,
+    cardId: card.id,
   });
 
   return NextResponse.json(

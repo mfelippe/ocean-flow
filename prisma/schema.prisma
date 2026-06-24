@@ -46,6 +46,11 @@ enum ActivityType {
   MEMBER_ADDED
 }
 
+enum AutomationTrigger {
+  CARD_CREATED
+  CARD_MOVED_TO_COLUMN
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -134,6 +139,7 @@ model Board {
   activities   Activity[]
   members      BoardMembership[]
   customFields CustomField[]
+  automations  Automation[]
 
   @@index([organizationId])
 }
@@ -186,8 +192,9 @@ model Column {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  cards Card[]
+  board       Board        @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards       Card[]
+  automations Automation[] @relation("AutomationTriggerColumn")
 
   @@index([boardId])
 }
@@ -281,4 +288,25 @@ model Activity {
 
   @@index([boardId])
   @@index([cardId])
+}
+
+// Regra de automação por quadro: GATILHO → AÇÕES. Restrita ao admin do quadro.
+// `actions` guarda um array JSON de ações (mover, label, comentário, HTTP).
+// `triggerColumnId`: coluna do gatilho (obrigatória em CARD_MOVED_TO_COLUMN;
+// opcional em CARD_CREATED = qualquer coluna).
+model Automation {
+  id              String            @id @default(cuid())
+  boardId         String
+  name            String
+  enabled         Boolean           @default(true)
+  trigger         AutomationTrigger
+  triggerColumnId String?
+  actions         Json
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  board         Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  triggerColumn Column? @relation("AutomationTriggerColumn", fields: [triggerColumnId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
 }

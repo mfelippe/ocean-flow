@@ -11,8 +11,14 @@ import {
   createCustomField,
   deleteCustomField,
 } from "@/app/actions/custom-fields";
+import {
+  createAutomation,
+  deleteAutomation,
+  toggleAutomation,
+} from "@/app/actions/automations";
 import { AddBoardMemberForm } from "@/components/add-board-member-form";
 import { CreateCustomFieldForm } from "@/components/create-custom-field-form";
+import { AutomationForm } from "@/components/automation-form";
 import { ConfirmButton } from "@/components/confirm-button";
 import { UserMenu } from "@/components/user-menu";
 
@@ -21,6 +27,21 @@ const FIELD_TYPE_LABEL: Record<string, string> = {
   NUMBER: "Número",
   DATE: "Data",
 };
+
+const ACTION_LABEL: Record<string, string> = {
+  MOVE_CARD: "mover para coluna",
+  ADD_LABEL: "adicionar label",
+  REMOVE_LABEL: "remover label",
+  ADD_COMMENT: "comentar",
+  HTTP_REQUEST: "requisição HTTP",
+};
+
+function describeActions(actions: unknown): string {
+  if (!Array.isArray(actions)) return "—";
+  return actions
+    .map((a) => ACTION_LABEL[(a as { type?: string })?.type ?? ""] ?? "ação")
+    .join(", ");
+}
 
 export default async function BoardAccessPage({
   params,
@@ -44,9 +65,28 @@ export default async function BoardAccessPage({
     orderBy: { createdAt: "asc" },
   });
 
+  const columns = await prisma.column.findMany({
+    where: { boardId },
+    orderBy: { rank: "asc" },
+    select: { id: true, name: true },
+  });
+
+  const labels = await prisma.label.findMany({
+    where: { boardId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+
+  const automations = await prisma.automation.findMany({
+    where: { boardId },
+    orderBy: { createdAt: "asc" },
+    include: { triggerColumn: { select: { name: true } } },
+  });
+
   const isPrivate = board.visibility === "PRIVATE";
   const boundAddMember = addBoardMember.bind(null, boardId);
   const boundCreateField = createCustomField.bind(null, boardId);
+  const boundCreateAutomation = createAutomation.bind(null, boardId);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -169,6 +209,74 @@ export default async function BoardAccessPage({
         )}
 
         <CreateCustomFieldForm action={boundCreateField} />
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-1 text-sm font-semibold text-ink">
+          Automações ({automations.length})
+        </h2>
+        <p className="mb-3 text-xs text-muted">
+          Regras gatilho → ação executadas neste quadro. Úteis para esteiras
+          automáticas e integrações (ex.: avisar a BotConversa via requisição
+          HTTP quando um card entra numa coluna).
+        </p>
+
+        {automations.length > 0 && (
+          <ul className="mb-4 divide-y divide-edge overflow-hidden rounded-xl border border-edge">
+            {automations.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-3 bg-panel/60 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {a.name}
+                    {!a.enabled && (
+                      <span className="ml-2 rounded bg-edge px-1.5 py-0.5 text-[10px] uppercase text-subtle">
+                        pausada
+                      </span>
+                    )}
+                  </p>
+                  <p className="truncate text-xs text-subtle">
+                    {a.trigger === "CARD_CREATED"
+                      ? `Card criado${a.triggerColumn ? ` em "${a.triggerColumn.name}"` : ""}`
+                      : `Card movido para "${a.triggerColumn?.name ?? "?"}"`}
+                    {" → "}
+                    {describeActions(a.actions)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <form action={toggleAutomation.bind(null, a.id)}>
+                    <button className="text-xs text-muted hover:text-brand">
+                      {a.enabled ? "pausar" : "ativar"}
+                    </button>
+                  </form>
+                  <ConfirmButton
+                    action={deleteAutomation.bind(null, a.id)}
+                    triggerClassName="text-xs text-subtle hover:text-red-400"
+                    title="Excluir automação?"
+                    description={`A automação "${a.name}" será removida permanentemente.`}
+                    confirmLabel="Excluir"
+                  >
+                    excluir
+                  </ConfirmButton>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {columns.length === 0 ? (
+          <p className="rounded-lg border border-edge bg-panel/60 px-4 py-3 text-xs text-muted">
+            Crie ao menos uma coluna no quadro para configurar automações.
+          </p>
+        ) : (
+          <AutomationForm
+            action={boundCreateAutomation}
+            columns={columns}
+            labels={labels}
+          />
+        )}
       </section>
     </main>
   );

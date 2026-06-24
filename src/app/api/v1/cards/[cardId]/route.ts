@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonError, requireApiToken } from "@/lib/api-auth";
 import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
+import { runAutomations } from "@/lib/automations";
 import { apiCardUpdateSchema } from "@/lib/validations";
 import { normalizeFieldValue } from "@/lib/custom-fields";
 
@@ -179,6 +180,14 @@ export async function PATCH(
       ? { from: card.column.name, to: movedTo, via: "api" }
       : { title: updated.title, via: "api" },
   });
+  if (input.columnId !== undefined && input.columnId !== card.columnId) {
+    runAutomations({
+      boardId: card.column.boardId,
+      trigger: "CARD_MOVED_TO_COLUMN",
+      columnId: input.columnId,
+      cardId: card.id,
+    });
+  }
 
   return NextResponse.json({
     card: {

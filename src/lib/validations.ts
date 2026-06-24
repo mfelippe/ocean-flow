@@ -72,6 +72,37 @@ export const apiCardUpdateSchema = z.object({
   fields: z.record(z.string(), z.string()).optional(),
 });
 
+// ─── Automações (gatilho → ações) ────────────────────────────────────
+// Cada ação é validada por tipo; o array é guardado como JSON em Automation.actions.
+export const automationActionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("MOVE_CARD"), columnId: z.string().min(1) }),
+  z.object({ type: z.literal("ADD_LABEL"), labelId: z.string().min(1) }),
+  z.object({ type: z.literal("REMOVE_LABEL"), labelId: z.string().min(1) }),
+  z.object({
+    type: z.literal("ADD_COMMENT"),
+    body: z.string().trim().min(1, "Escreva o texto do comentário.").max(5000),
+  }),
+  z.object({
+    type: z.literal("HTTP_REQUEST"),
+    method: z.enum(["GET", "POST"]),
+    url: z.url("Informe uma URL válida (https://…)."),
+    headers: z.record(z.string(), z.string()).optional(),
+    body: z.string().max(10000).optional(),
+  }),
+]);
+
+export const automationSchema = z.object({
+  name: z.string().trim().min(1, "Dê um nome à automação.").max(80),
+  trigger: z.enum(["CARD_CREATED", "CARD_MOVED_TO_COLUMN"]),
+  triggerColumnId: z.string().min(1).nullish(),
+  actions: z
+    .array(automationActionSchema)
+    .min(1, "Adicione ao menos uma ação."),
+});
+
+export type AutomationActionInput = z.infer<typeof automationActionSchema>;
+export type AutomationInput = z.infer<typeof automationSchema>;
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Informe a senha atual."),
