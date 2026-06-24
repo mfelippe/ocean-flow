@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireBoardWrite } from "@/lib/authz";
+import { requireBoardManage, requireBoardWrite } from "@/lib/authz";
 import { logActivity } from "@/lib/activity";
+import { rankBetween } from "@/lib/rank";
 import { cardSchema, commentSchema, labelSchema } from "@/lib/validations";
 
 export type FormState = { error?: string; ok?: boolean } | undefined;
@@ -61,6 +62,74 @@ export async function updateCardContent(
 
   revalidateCard(card.column.board.organization.slug, card.column.boardId, cardId);
   return { ok: true };
+}
+
+// ─── Ações de admin do quadro (desarquivar, excluir, mover entre quadros) ──
+
+export async function unarchiveCard(cardId: string): Promise<void> {
+  const card = await loadCard(cardId);
+  if (!card) return;
+  await requireBoardManage(card.column.boardId);
+  await prisma.card.update({ where: { id: cardId }, data: { archivedAt: null } });
+  revalidateCard(card.column.board.organization.slug, card.column.boardId, cardId);
+  revalidatePath(
+    `/orgs/${card.column.board.organization.slug}/boards/${card.column.boardId}/settings`,
+  );
+}
+
+export async function deleteCardPermanent(cardId: string): Promise<void> {
+  const card = await loadCard(cardId);
+  if (!card) return;
+  const { board } = await requireBoardManage(card.column.boardId);
+  await prisma.card.delete({ where: { id: cardId } }); // cascade em comments/anexos/etc.
+  revalidatePath(`/orgs/${board.organization.slug}/boards/${card.column.boardId}`);
+  revalidatePath(
+    `/orgs/${board.organization.slug}/boards/${card.column.boardId}/settings`,
+  );
+}
+
+/** Move um card para OUTRO quadro da mesma organização (primeira coluna). */
+export async function moveCardToBoard(
+  cardId: string,
+  targetBoardId: string,
+): Promise<void> {
+  const card = await loadCard(cardId);
+  if (!card) return;
+  const { board, user } = await requireBoardManage(card.column.boardId);
+  if (targetBoardId === card.column.boardId) return;
+
+  // O quadro de destino precisa ser da MESMA organização e não arquivado.
+  const target = await prisma.board.findFirst({
+    where: {
+      id: targetBoardId,
+      organizationId: board.organizationId,
+      archivedAt: null,
+    },
+    include: { columns: { orderBy: { rank: "asc" }, take: 1 } },
+  });
+  const destColumn = target?.columns[0];
+  if (!destColumn) return; // quadro inválido ou sem colunas
+
+  const last = await prisma.card.findFirst({
+    where: { columnId: destColumn.id, archivedAt: null },
+    orderBy: { rank: "desc" },
+  });
+  await prisma.card.update({
+    where: { id: cardId },
+    data: { columnId: destColumn.id, rank: rankBetween(last?.rank ?? null, null) },
+  });
+  await logActivity({
+    boardId: targetBoardId,
+    cardId,
+    actorId: user.id,
+    type: "CARD_MOVED",
+    payload: { from: card.column.name, to: destColumn.name, via: "admin" },
+  });
+
+  const slug = board.organization.slug;
+  revalidatePath(`/orgs/${slug}/boards/${card.column.boardId}`);
+  revalidatePath(`/orgs/${slug}/boards/${targetBoardId}`);
+  revalidatePath(`/orgs/${slug}/boards/${targetBoardId}/cards/${cardId}`);
 }
 
 // ─── Responsável (assignee) ──────────────────────────────────────────

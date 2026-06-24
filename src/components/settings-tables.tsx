@@ -250,6 +250,59 @@ export function WebhooksTable({
   return <DataTable columns={columns} data={webhooks} searchPlaceholder="Buscar webhook…" />;
 }
 
+// ─── Cards arquivados ────────────────────────────────────────────────
+type ArchivedCardRow = { id: string; title: string; columnName: string };
+
+export function ArchivedCardsTable({
+  cards,
+  onUnarchive,
+  onDelete,
+}: {
+  cards: ArchivedCardRow[];
+  onUnarchive: Action1;
+  onDelete: Action1;
+}) {
+  const columns = React.useMemo<ColumnDef<ArchivedCardRow>[]>(
+    () => [
+      {
+        accessorKey: "title",
+        header: "Card",
+        cell: ({ getValue }) => <span className="font-medium">{getValue<string>()}</span>,
+      },
+      {
+        accessorKey: "columnName",
+        header: "Coluna",
+        cell: ({ getValue }) => (
+          <span className="text-xs text-subtle">{getValue<string>()}</span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-3">
+            <form action={onUnarchive.bind(null, row.original.id) as Action0}>
+              <button className="text-xs text-brand hover:underline">desarquivar</button>
+            </form>
+            <ConfirmButton
+              action={onDelete.bind(null, row.original.id) as Action0}
+              triggerClassName="text-xs text-subtle hover:text-red-400"
+              title="Excluir permanentemente?"
+              description={`"${row.original.title}" e todo o seu conteúdo serão removidos para sempre. Esta ação não pode ser desfeita.`}
+              confirmLabel="Excluir para sempre"
+            >
+              excluir
+            </ConfirmButton>
+          </div>
+        ),
+      },
+    ],
+    [onUnarchive, onDelete],
+  );
+  return <DataTable columns={columns} data={cards} searchPlaceholder="Buscar card arquivado…" />;
+}
+
 // ─── Tokens de API ───────────────────────────────────────────────────
 type TokenRow = { id: string; name: string; prefix: string; lastUsedText: string };
 

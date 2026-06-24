@@ -22,6 +22,7 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { setCardFields } from "@/app/actions/custom-fields";
 import { CardFieldsForm } from "@/components/card-fields-form";
 import { AssigneePicker } from "@/components/assignee-picker";
+import { CardAdminActions } from "@/components/card-admin-actions";
 import { inputClass } from "@/components/form";
 
 function activityText(type: string, payload: unknown): string {
@@ -60,10 +61,11 @@ export default async function CardPage({
   params: Promise<{ slug: string; boardId: string; cardId: string }>;
 }) {
   const { slug, boardId, cardId } = await params;
-  const { role, board } = await getBoardContext(boardId);
+  const { role, orgRole, board, user } = await getBoardContext(boardId);
   if (board.organization.slug !== slug) notFound();
 
   const canWrite = role !== "VIEWER";
+  const canManage = role === "OWNER" || role === "ADMIN";
   const boardHref = `/orgs/${slug}/boards/${boardId}`;
 
   const card = await prisma.card.findUnique({
@@ -86,6 +88,31 @@ export default async function CardPage({
     orderBy: { createdAt: "asc" },
   });
   const memberOptions = orgMembers.map((m) => ({ id: m.user.id, name: m.user.name }));
+
+  // Quadros para "mover entre quadros" (admin): outros quadros da org acessíveis.
+  const isOrgAdmin = orgRole === "OWNER" || orgRole === "ADMIN";
+  let moveTargets: { id: string; name: string }[] = [];
+  if (canManage) {
+    const memberBoardIds = isOrgAdmin
+      ? new Set<string>()
+      : new Set(
+          (
+            await prisma.boardMembership.findMany({
+              where: { userId: user.id, board: { organizationId: board.organizationId } },
+              select: { boardId: true },
+            })
+          ).map((m) => m.boardId),
+        );
+    moveTargets = (
+      await prisma.board.findMany({
+        where: { organizationId: board.organizationId, archivedAt: null, id: { not: boardId } },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, visibility: true },
+      })
+    )
+      .filter((b) => isOrgAdmin || b.visibility === "ORG" || memberBoardIds.has(b.id))
+      .map((b) => ({ id: b.id, name: b.name }));
+  }
 
   const boardLabels = await prisma.label.findMany({
     where: { boardId },
@@ -310,6 +337,20 @@ export default async function CardPage({
                 fields={fieldVMs}
                 canWrite={canWrite}
                 action={setCardFields.bind(null, cardId)}
+              />
+            </section>
+          )}
+
+          {canManage && (
+            <section>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-subtle">
+                Administração
+              </h3>
+              <CardAdminActions
+                cardId={cardId}
+                slug={slug}
+                boardHref={boardHref}
+                boards={moveTargets}
               />
             </section>
           )}

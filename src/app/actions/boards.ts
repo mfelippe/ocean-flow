@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireBoardWrite, requireOrgWrite } from "@/lib/authz";
+import { requireBoardManage, requireBoardWrite, requireOrgWrite } from "@/lib/authz";
 import { boardSchema, columnSchema, cardSchema } from "@/lib/validations";
 import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
@@ -65,13 +65,23 @@ export async function renameBoard(
   revalidatePath(boardPath(board.organization.slug, boardId));
 }
 
+// Arquivar/desarquivar quadro é restrito ao ADMIN do quadro (não a membros).
 export async function archiveBoard(boardId: string): Promise<void> {
-  const { board } = await requireBoardWrite(boardId);
+  const { board } = await requireBoardManage(boardId);
   await prisma.board.update({
     where: { id: boardId },
     data: { archivedAt: new Date() },
   });
   redirect(`/orgs/${board.organization.slug}`);
+}
+
+export async function unarchiveBoard(boardId: string): Promise<void> {
+  const { board } = await requireBoardManage(boardId);
+  await prisma.board.update({
+    where: { id: boardId },
+    data: { archivedAt: null },
+  });
+  revalidatePath(`/orgs/${board.organization.slug}`);
 }
 
 // ─── Column ──────────────────────────────────────────────────────────

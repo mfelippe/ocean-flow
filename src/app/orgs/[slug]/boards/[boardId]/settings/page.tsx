@@ -19,10 +19,12 @@ import {
 import { AddBoardMemberForm } from "@/components/add-board-member-form";
 import { CreateCustomFieldForm } from "@/components/create-custom-field-form";
 import { AutomationForm } from "@/components/automation-form";
+import { unarchiveCard, deleteCardPermanent } from "@/app/actions/cards";
 import {
   BoardMembersTable,
   CustomFieldsTable,
   AutomationsTable,
+  ArchivedCardsTable,
 } from "@/components/settings-tables";
 import { UserMenu } from "@/components/user-menu";
 
@@ -87,6 +89,17 @@ export default async function BoardAccessPage({
     orderBy: { createdAt: "asc" },
     include: { triggerColumn: { select: { name: true } } },
   });
+
+  const archivedCards = await prisma.card.findMany({
+    where: { column: { boardId }, archivedAt: { not: null } },
+    orderBy: { updatedAt: "desc" },
+    include: { column: { select: { name: true } } },
+  });
+  const archivedCardRows = archivedCards.map((c) => ({
+    id: c.id,
+    title: c.title,
+    columnName: c.column.name,
+  }));
 
   // Quadros da MESMA org que o usuário pode escolher como destino de "criar card".
   // Org admins veem todos; demais veem os ORG-visíveis + aqueles em que são membros.
@@ -251,6 +264,27 @@ export default async function BoardAccessPage({
             labels={labels}
             boards={orgBoards}
           />
+        )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-1 text-sm font-semibold text-ink">
+          Cards arquivados ({archivedCards.length})
+        </h2>
+        <p className="mb-3 text-xs text-muted">
+          Cards arquivados deste quadro. Você pode desarquivar (voltam à coluna
+          de origem) ou excluir permanentemente.
+        </p>
+        {archivedCards.length > 0 ? (
+          <ArchivedCardsTable
+            cards={archivedCardRows}
+            onUnarchive={unarchiveCard}
+            onDelete={deleteCardPermanent}
+          />
+        ) : (
+          <p className="rounded-lg border border-edge bg-panel/60 px-4 py-3 text-xs text-muted">
+            Nenhum card arquivado.
+          </p>
         )}
       </section>
     </main>

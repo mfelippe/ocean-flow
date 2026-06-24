@@ -156,7 +156,7 @@ export default async function BoardPage({
               ⚙️ Configurações
             </Link>
           )}
-          {canWrite && (
+          {canManage && (
             <ConfirmButton
               action={archiveBoard.bind(null, boardId)}
               triggerClassName="text-xs text-subtle hover:text-red-400"
@@ -176,7 +176,7 @@ export default async function BoardPage({
           basePath={`/orgs/${slug}/boards/${boardId}`}
           current={view}
         />
-        <BoardMetricsSheet metrics={metrics} />
+        {canManage && <BoardMetricsSheet metrics={metrics} />}
       </div>
 
       {view === "kanban" ? (

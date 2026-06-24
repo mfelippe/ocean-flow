@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { addMember } from "@/app/actions/organizations";
-import { createBoard } from "@/app/actions/boards";
+import { createBoard, unarchiveBoard } from "@/app/actions/boards";
 import { AddMemberForm } from "@/components/add-member-form";
 import { CreateBoardForm } from "@/components/create-board-form";
 import { UserMenu } from "@/components/user-menu";
@@ -51,6 +51,14 @@ export default async function OrganizationPage({
     },
     orderBy: { createdAt: "asc" },
   });
+
+  // Quadros arquivados — visíveis e geríveis por admins da org.
+  const archivedBoards = canManage
+    ? await prisma.board.findMany({
+        where: { organizationId: org.id, archivedAt: { not: null } },
+        orderBy: { updatedAt: "desc" },
+      })
+    : [];
 
   const boundAddMember = addMember.bind(null, org.id, org.slug);
   const boundCreateBoard = createBoard.bind(null, org.id, org.slug);
@@ -105,6 +113,29 @@ export default async function OrganizationPage({
           </div>
         )}
       </section>
+
+      {canManage && archivedBoards.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold text-ink">
+            Quadros arquivados ({archivedBoards.length})
+          </h2>
+          <ul className="divide-y divide-edge overflow-hidden rounded-xl border border-edge">
+            {archivedBoards.map((b) => (
+              <li
+                key={b.id}
+                className="flex items-center justify-between gap-3 bg-panel/60 px-4 py-3"
+              >
+                <span className="text-sm text-muted">{b.name}</span>
+                <form action={unarchiveBoard.bind(null, b.id)}>
+                  <button className="text-xs text-brand hover:underline">
+                    desarquivar
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold text-ink">
