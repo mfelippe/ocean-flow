@@ -51,6 +51,23 @@ export async function createAutomation(
     if (!col) return { error: "Coluna do gatilho inválida." };
   }
 
+  // Ações "criar card" só podem apontar para quadros DA MESMA organização
+  // (limite de tenancy) e a coluna precisa pertencer ao quadro alvo.
+  for (const action of parsed.data.actions) {
+    if (action.type !== "CREATE_CARD") continue;
+    const targetCol = await prisma.column.findFirst({
+      where: { id: action.columnId, boardId: action.boardId },
+      include: { board: { select: { organizationId: true, archivedAt: true } } },
+    });
+    if (
+      !targetCol ||
+      targetCol.board.archivedAt ||
+      targetCol.board.organizationId !== board.organizationId
+    ) {
+      return { error: "Quadro/coluna de destino inválido para esta organização." };
+    }
+  }
+
   await prisma.automation.create({
     data: {
       boardId,

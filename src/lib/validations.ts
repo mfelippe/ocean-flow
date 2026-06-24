@@ -76,6 +76,13 @@ export const apiCardUpdateSchema = z.object({
 // Cada ação é validada por tipo; o array é guardado como JSON em Automation.actions.
 export const automationActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("MOVE_CARD"), columnId: z.string().min(1) }),
+  z.object({
+    type: z.literal("CREATE_CARD"),
+    boardId: z.string().min(1),
+    columnId: z.string().min(1),
+    title: z.string().trim().min(1, "Informe o título do card a criar.").max(500),
+    description: z.string().max(5000).optional(),
+  }),
   z.object({ type: z.literal("ADD_LABEL"), labelId: z.string().min(1) }),
   z.object({ type: z.literal("REMOVE_LABEL"), labelId: z.string().min(1) }),
   z.object({

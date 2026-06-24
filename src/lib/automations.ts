@@ -47,6 +47,7 @@ type CardContext = {
   title: string;
   description: string;
   url: string;
+  organizationId: string; // org do card de origem (limite de tenancy)
   columnId: string;
   columnName: string;
   fields: Record<string, string>; // nome do campo (minúsculo) → valor
@@ -131,6 +132,7 @@ async function loadCardContext(cardId: string): Promise<CardContext | null> {
     title: card.title,
     description: card.description ?? "",
     url,
+    organizationId: card.column.board.organizationId,
     columnId: card.columnId,
     columnName: card.column.name,
     fields,
@@ -186,6 +188,42 @@ async function runAction(
       // mantém o contexto coerente caso outra ação use a coluna.
       ctx.columnId = target.id;
       ctx.columnName = target.name;
+      return;
+    }
+    case "CREATE_CARD": {
+      // Cria um card em OUTRO quadro (ou no mesmo), sempre na MESMA organização.
+      const target = await prisma.column.findFirst({
+        where: { id: action.columnId, boardId: action.boardId },
+        include: { board: { select: { organizationId: true, archivedAt: true } } },
+      });
+      if (
+        !target ||
+        target.board.archivedAt ||
+        target.board.organizationId !== ctx.organizationId
+      ) {
+        return; // coluna inexistente, quadro arquivado ou de outra org: ignora.
+      }
+      const last = await prisma.card.findFirst({
+        where: { columnId: target.id, archivedAt: null },
+        orderBy: { rank: "desc" },
+      });
+      const created = await prisma.card.create({
+        data: {
+          columnId: target.id,
+          title: renderTemplate(action.title, ctx),
+          description: action.description
+            ? renderTemplate(action.description, ctx)
+            : null,
+          rank: rankBetween(last?.rank ?? null, null),
+        },
+      });
+      // Registra a criação no quadro de destino (sem reentrar no motor → anti-loop).
+      await logAutomationActivity({
+        boardId: action.boardId,
+        cardId: created.id,
+        type: "CARD_CREATED",
+        payload: { title: created.title, via: "automation" },
+      });
       return;
     }
     case "ADD_LABEL": {

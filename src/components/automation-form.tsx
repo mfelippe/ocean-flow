@@ -12,10 +12,12 @@ import {
 
 type ColumnVM = { id: string; name: string };
 type LabelVM = { id: string; name: string };
+type BoardVM = { id: string; name: string; columns: ColumnVM[] };
 type Action = (prev: FormState, fd: FormData) => Promise<FormState>;
 
 type ActionType =
   | "MOVE_CARD"
+  | "CREATE_CARD"
   | "ADD_LABEL"
   | "REMOVE_LABEL"
   | "ADD_COMMENT"
@@ -30,6 +32,10 @@ type ActionRow = {
   url: string;
   headersText: string;
   httpBody: string;
+  targetBoardId: string;
+  targetColumnId: string;
+  cardTitle: string;
+  cardDescription: string;
 };
 
 function emptyRow(): ActionRow {
@@ -42,11 +48,16 @@ function emptyRow(): ActionRow {
     url: "",
     headersText: "",
     httpBody: "",
+    targetBoardId: "",
+    targetColumnId: "",
+    cardTitle: "",
+    cardDescription: "",
   };
 }
 
 const ACTION_LABEL: Record<ActionType, string> = {
   MOVE_CARD: "Mover card para coluna",
+  CREATE_CARD: "Criar card em outro quadro",
   ADD_LABEL: "Adicionar label",
   REMOVE_LABEL: "Remover label",
   ADD_COMMENT: "Adicionar comentário",
@@ -72,6 +83,16 @@ function serialize(rows: ActionRow[]): unknown[] {
     switch (r.type) {
       case "MOVE_CARD":
         return { type: r.type, columnId: r.columnId };
+      case "CREATE_CARD": {
+        const action: Record<string, unknown> = {
+          type: r.type,
+          boardId: r.targetBoardId,
+          columnId: r.targetColumnId,
+          title: r.cardTitle,
+        };
+        if (r.cardDescription) action.description = r.cardDescription;
+        return action;
+      }
       case "ADD_LABEL":
       case "REMOVE_LABEL":
         return { type: r.type, labelId: r.labelId };
@@ -96,10 +117,12 @@ export function AutomationForm({
   action,
   columns,
   labels,
+  boards,
 }: {
   action: Action;
   columns: ColumnVM[];
   labels: LabelVM[];
+  boards: BoardVM[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction] = useActionState<FormState, FormData>(
@@ -193,6 +216,45 @@ export function AutomationForm({
                 <option value="">Escolha a coluna…</option>
                 {columns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+            )}
+
+            {row.type === "CREATE_CARD" && (
+              <div className="space-y-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <select
+                    value={row.targetBoardId}
+                    onChange={(e) => patchRow(i, { targetBoardId: e.target.value, targetColumnId: "" })}
+                    className={inputClass}
+                  >
+                    <option value="">Escolha o quadro…</option>
+                    {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                  <select
+                    value={row.targetColumnId}
+                    onChange={(e) => patchRow(i, { targetColumnId: e.target.value })}
+                    className={inputClass}
+                    disabled={!row.targetBoardId}
+                  >
+                    <option value="">Escolha a coluna…</option>
+                    {boards.find((b) => b.id === row.targetBoardId)?.columns.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <input
+                  value={row.cardTitle}
+                  onChange={(e) => patchRow(i, { cardTitle: e.target.value })}
+                  placeholder="Título do novo card. Ex.: Follow-up: {{card.title}}"
+                  className={inputClass}
+                />
+                <textarea
+                  value={row.cardDescription}
+                  onChange={(e) => patchRow(i, { cardDescription: e.target.value })}
+                  rows={2}
+                  placeholder="Descrição (opcional). Use {{field.Telefone}}, {{card.url}}…"
+                  className={inputClass}
+                />
+              </div>
             )}
 
             {(row.type === "ADD_LABEL" || row.type === "REMOVE_LABEL") && (

@@ -30,6 +30,7 @@ const FIELD_TYPE_LABEL: Record<string, string> = {
 
 const ACTION_LABEL: Record<string, string> = {
   MOVE_CARD: "mover para coluna",
+  CREATE_CARD: "criar card em outro quadro",
   ADD_LABEL: "adicionar label",
   REMOVE_LABEL: "remover label",
   ADD_COMMENT: "comentar",
@@ -51,7 +52,7 @@ export default async function BoardAccessPage({
   const { slug, boardId } = await params;
 
   // Apenas administradores do quadro (lança/404 caso contrário).
-  const { user, board } = await requireBoardManage(boardId);
+  const { user, board, orgRole } = await requireBoardManage(boardId);
   if (board.organization.slug !== slug || board.archivedAt) notFound();
 
   const members = await prisma.boardMembership.findMany({
@@ -82,6 +83,33 @@ export default async function BoardAccessPage({
     orderBy: { createdAt: "asc" },
     include: { triggerColumn: { select: { name: true } } },
   });
+
+  // Quadros da MESMA org que o usuário pode escolher como destino de "criar card".
+  // Org admins veem todos; demais veem os ORG-visíveis + aqueles em que são membros.
+  const isOrgAdmin = orgRole === "OWNER" || orgRole === "ADMIN";
+  const memberBoardIds = isOrgAdmin
+    ? new Set<string>()
+    : new Set(
+        (
+          await prisma.boardMembership.findMany({
+            where: { userId: user.id, board: { organizationId: board.organizationId } },
+            select: { boardId: true },
+          })
+        ).map((m) => m.boardId),
+      );
+  const orgBoards = (
+    await prisma.board.findMany({
+      where: { organizationId: board.organizationId, archivedAt: null },
+      orderBy: { name: "asc" },
+      include: {
+        columns: { orderBy: { rank: "asc" }, select: { id: true, name: true } },
+      },
+    })
+  )
+    .filter(
+      (b) => isOrgAdmin || b.visibility === "ORG" || memberBoardIds.has(b.id),
+    )
+    .map((b) => ({ id: b.id, name: b.name, columns: b.columns }));
 
   const isPrivate = board.visibility === "PRIVATE";
   const boundAddMember = addBoardMember.bind(null, boardId);
@@ -275,6 +303,7 @@ export default async function BoardAccessPage({
             action={boundCreateAutomation}
             columns={columns}
             labels={labels}
+            boards={orgBoards}
           />
         )}
       </section>
