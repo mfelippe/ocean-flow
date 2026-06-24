@@ -40,26 +40,63 @@ fluxo de desenvolvimento: [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ---
 
-## Subindo com Docker (recomendado)
+## 🚀 Instalação (self-hosted)
 
-Pré-requisito: Docker.
+**Pré-requisito único: Docker.** O jeito mais rápido — usa a imagem publicada
+(sem clonar o repositório) e já sobe um PostgreSQL embutido.
+
+**1. Crie uma pasta e baixe o `docker-compose`:**
+
+```bash
+mkdir ocean-flow && cd ocean-flow
+curl -O https://raw.githubusercontent.com/mfelippe/ocean-flow/main/docker-compose.release.yml
+```
+
+**2. Crie o arquivo `.env`** (o comando abaixo já gera o `AUTH_SECRET`):
+
+```bash
+cat > .env <<EOF
+AUTH_SECRET=$(openssl rand -base64 32)
+AUTH_URL=http://localhost:3000
+EOF
+```
+
+> Em produção, troque `AUTH_URL` pela URL pública (ex.: `https://kanban.seu-dominio.com`).
+
+**3. Suba:**
+
+```bash
+docker compose -f docker-compose.release.yml up -d
+```
+
+**4. Acesse <http://localhost:3000>.** No primeiro acesso, a tela **`/setup`**
+cria o **usuário administrador** e a **primeira organização** (no estilo do
+Uptime Kuma). Pronto. ✅
+
+As migrations rodam sozinhas no start; os anexos ficam num volume
+(`oceanflow_uploads`) e o banco em `oceanflow_db`.
+
+> **Banco externo, HTTPS, backup, upgrade e administração** (`/admin`): veja o
+> guia completo em **[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md)**.
+
+<details>
+<summary>Alternativa: rodar a partir do código-fonte (build local)</summary>
 
 ```bash
 git clone https://github.com/mfelippe/ocean-flow.git
 cd ocean-flow
-docker compose up --build
+docker compose up --build -d        # builda a imagem + sobe Postgres
 ```
 
-A aplicação sobe em <http://localhost:3000> (app + PostgreSQL). As migrations
-são aplicadas automaticamente no start, e os anexos ficam num volume
-(`oceanflow_uploads`).
+Sobe em <http://localhost:3000>. Útil para testar mudanças no código sem
+publicar uma imagem.
 
-> **Produção:** para usar a imagem publicada (sem build), secrets via `.env`,
-> backup, upgrade e HTTPS, veja o guia **[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md)**.
+</details>
 
-## Desenvolvimento local
+## 💻 Desenvolvimento local
 
-Pré-requisitos: Node 22 (veja [.nvmrc](.nvmrc)), Docker, Git.
+Para contribuir com o código (sem Docker para a app). Pré-requisitos: Node 22
+(veja [.nvmrc](.nvmrc)), Docker (só para o Postgres) e Git.
 
 ```bash
 nvm use
@@ -74,13 +111,13 @@ Scripts úteis: `npm run typecheck`, `npm run lint`, `npm run db:studio`.
 
 ## Variáveis de ambiente
 
-| Variável        | Descrição                                              |
-| --------------- | ------------------------------------------------------ |
-| `DATABASE_URL`  | String de conexão do PostgreSQL                        |
-| `AUTH_SECRET`   | Segredo do Auth.js (`openssl rand -base64 32`)         |
-| `AUTH_URL`      | URL base da aplicação (ex.: `http://localhost:3000`)   |
-| `UPLOAD_DIR`    | Diretório dos anexos (padrão `./uploads`; Docker: `/data/uploads`) |
-| `NODE_ENV`      | `development` / `production`                           |
+| Variável       | Obrigatória | Descrição                                                                |
+| -------------- | ----------- | ------------------------------------------------------------------------ |
+| `AUTH_SECRET`  | **sim**     | Segredo do Auth.js — gere com `openssl rand -base64 32`                  |
+| `AUTH_URL`     | recomendada | URL pública da instância (ex.: `https://kanban.seu-dominio.com`)         |
+| `DATABASE_URL` | não\*       | Postgres externo (`postgresql://…`). \*Sem ela, usa o banco embutido.    |
+| `PORT`         | não         | Porta exposta (padrão `3000`)                                            |
+| `UPLOAD_DIR`   | não         | Diretório dos anexos (Docker: `/data/uploads`; dev: `./uploads`)         |
 
 ---
 
