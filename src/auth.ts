@@ -22,6 +22,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return null;
 
+        // Usuário bloqueado pelo super admin não consegue autenticar.
+        if (user.blockedAt) return null;
+
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 

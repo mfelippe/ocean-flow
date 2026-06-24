@@ -68,6 +68,18 @@ export async function requireBoardManage(boardId: string) {
   return ctx;
 }
 
+/** Exige que o usuário seja SUPER ADMIN da instância. Caso contrário, 404
+ *  (a página de admin não deve ser revelada a usuários comuns). */
+export async function requireSuperAdmin() {
+  const sessionUser = await requireUser();
+  const user = await prisma.user.findUnique({
+    where: { id: sessionUser.id },
+    select: { id: true, name: true, email: true, isSuperAdmin: true },
+  });
+  if (!user?.isSuperAdmin) notFound();
+  return user;
+}
+
 /** Exige que o usuário seja OWNER ou ADMIN da organização (ações administrativas). */
 export async function requireOrgAdmin(orgId: string) {
   const user = await requireUser();

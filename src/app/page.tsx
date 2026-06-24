@@ -7,11 +7,17 @@ import { UserMenu } from "@/components/user-menu";
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const memberships = await prisma.membership.findMany({
-    where: { userId: user.id },
-    include: { organization: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const [memberships, dbUser] = await Promise.all([
+    prisma.membership.findMany({
+      where: { userId: user.id },
+      include: { organization: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { isSuperAdmin: true },
+    }),
+  ]);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -22,7 +28,17 @@ export default async function DashboardPage() {
             Olá, {user.name ?? user.email}.
           </p>
         </div>
-        <UserMenu name={user.name ?? ""} email={user.email ?? ""} />
+        <div className="flex items-center gap-3">
+          {dbUser?.isSuperAdmin && (
+            <Link
+              href="/admin"
+              className="rounded-lg border border-edge px-3 py-1.5 text-sm text-ink hover:bg-edge"
+            >
+              Admin
+            </Link>
+          )}
+          <UserMenu name={user.name ?? ""} email={user.email ?? ""} />
+        </div>
       </header>
 
       <section className="mt-8 space-y-3">
