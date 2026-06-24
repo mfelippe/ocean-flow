@@ -4,12 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table";
+import { Avatar } from "@/components/avatar";
 
 export type TableCardRow = {
   id: string;
   title: string;
   columnName: string;
   dueDate: string | null;
+  assignee: string | null;
   fields: Record<string, string>;
 };
 
@@ -47,6 +49,21 @@ export function BoardTableView({
             {getValue<string>()}
           </span>
         ),
+      },
+      {
+        accessorKey: "assignee",
+        header: "Responsável",
+        cell: ({ getValue }) => {
+          const v = getValue<string | null>();
+          return v ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Avatar name={v} size={20} />
+              <span className="text-xs text-ink">{v}</span>
+            </span>
+          ) : (
+            <span className="text-xs text-subtle">—</span>
+          );
+        },
       },
       {
         accessorKey: "dueDate",

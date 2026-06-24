@@ -44,6 +44,7 @@ export default async function BoardPage({
           where: { archivedAt: null },
           orderBy: { rank: "asc" },
           include: {
+            assignee: { select: { id: true, name: true } },
             labels: { include: { label: true } },
             fieldValues: { include: { field: true } },
             _count: { select: { attachments: true } },
@@ -74,6 +75,7 @@ export default async function BoardPage({
         color: cl.label.color,
       })),
       attachmentCount: card._count.attachments,
+      assignee: card.assignee ? { name: card.assignee.name } : null,
     })),
   }));
 
@@ -84,6 +86,7 @@ export default async function BoardPage({
       title: card.title,
       columnName: c.name,
       dueDate: card.dueDate ? card.dueDate.toISOString() : null,
+      assignee: card.assignee?.name ?? null,
       fields: Object.fromEntries(
         card.fieldValues.map((fv) => [fv.field.name, fv.value]),
       ) as Record<string, string>,

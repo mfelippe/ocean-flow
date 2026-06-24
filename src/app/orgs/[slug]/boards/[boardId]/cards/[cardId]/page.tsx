@@ -21,6 +21,7 @@ import { AttachmentForm } from "@/components/attachment-form";
 import { ConfirmButton } from "@/components/confirm-button";
 import { setCardFields } from "@/app/actions/custom-fields";
 import { CardFieldsForm } from "@/components/card-fields-form";
+import { AssigneePicker } from "@/components/assignee-picker";
 import { inputClass } from "@/components/form";
 
 function activityText(type: string, payload: unknown): string {
@@ -69,6 +70,7 @@ export default async function CardPage({
     where: { id: cardId },
     include: {
       column: true,
+      assignee: { select: { id: true, name: true } },
       labels: { include: { label: true } },
       comments: { include: { author: true }, orderBy: { createdAt: "desc" } },
       attachments: { orderBy: { createdAt: "desc" } },
@@ -76,6 +78,14 @@ export default async function CardPage({
     },
   });
   if (!card || card.column.boardId !== boardId) notFound();
+
+  // Candidatos a responsável: membros da organização do quadro.
+  const orgMembers = await prisma.membership.findMany({
+    where: { organizationId: board.organizationId },
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  const memberOptions = orgMembers.map((m) => ({ id: m.user.id, name: m.user.name }));
 
   const boardLabels = await prisma.label.findMany({
     where: { boardId },
@@ -208,6 +218,19 @@ export default async function CardPage({
 
         {/* Barra lateral */}
         <aside className="space-y-6">
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-subtle">
+              Responsável
+            </h3>
+            <AssigneePicker
+              cardId={cardId}
+              members={memberOptions}
+              currentId={card.assignee?.id ?? null}
+              currentName={card.assignee?.name ?? null}
+              canWrite={canWrite}
+            />
+          </section>
+
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-subtle">
               Labels

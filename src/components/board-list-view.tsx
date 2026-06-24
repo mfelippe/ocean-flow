@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Paperclip } from "lucide-react";
+import { Avatar } from "@/components/avatar";
 
 type CardVM = {
   id: string;
@@ -7,6 +8,7 @@ type CardVM = {
   dueDate: string | null;
   labels: { id: string; name: string; color: string }[];
   attachmentCount: number;
+  assignee: { name: string } | null;
 };
 type ColumnVM = { id: string; name: string; cards: CardVM[] };
 
@@ -60,6 +62,11 @@ export function BoardListView({
                       <span className="truncate text-sm text-ink">{card.title}</span>
                     </div>
                     <div className="flex shrink-0 items-center gap-3 text-xs text-subtle">
+                      {card.assignee && (
+                        <span title={card.assignee.name}>
+                          <Avatar name={card.assignee.name} size={20} />
+                        </span>
+                      )}
                       {card.attachmentCount > 0 && (
                         <span className="inline-flex items-center gap-0.5">
                           <Paperclip className="size-3" />

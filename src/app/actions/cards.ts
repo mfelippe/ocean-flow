@@ -63,6 +63,31 @@ export async function updateCardContent(
   return { ok: true };
 }
 
+// ─── Responsável (assignee) ──────────────────────────────────────────
+
+export async function setCardAssignee(
+  cardId: string,
+  assigneeId: string | null,
+): Promise<void> {
+  const card = await loadCard(cardId);
+  if (!card) return;
+  await requireBoardWrite(card.column.boardId);
+
+  // Vazio = remover responsável. Senão, precisa ser membro da org do quadro.
+  let next: string | null = null;
+  if (assigneeId) {
+    const member = await prisma.membership.findFirst({
+      where: { userId: assigneeId, organizationId: card.column.board.organizationId },
+      select: { userId: true },
+    });
+    if (!member) return; // ignora ids fora da organização
+    next = assigneeId;
+  }
+
+  await prisma.card.update({ where: { id: cardId }, data: { assigneeId: next } });
+  revalidateCard(card.column.board.organization.slug, card.column.boardId, cardId);
+}
+
 // ─── Due date ────────────────────────────────────────────────────────
 
 export async function setDueDate(

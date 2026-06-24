@@ -39,6 +39,7 @@ import {
 } from "@/app/actions/boards";
 import { inputClass } from "@/components/form";
 import { ConfirmButton } from "@/components/confirm-button";
+import { Avatar } from "@/components/avatar";
 
 export type LabelT = { id: string; name: string; color: string };
 export type CardT = {
@@ -49,6 +50,7 @@ export type CardT = {
   dueDate: string | null;
   labels: LabelT[];
   attachmentCount: number;
+  assignee: { name: string } | null;
 };
 export type ColumnT = {
   id: string;
@@ -516,21 +518,30 @@ function SortableCard({
         )}
       </div>
 
-      <div className="mt-2 flex items-center justify-end gap-0.5 border-t border-edge/60 pt-2">
-        <Link href={href} className={iconBtn}>
-          abrir
-        </Link>
-        {canWrite && (
-          <ConfirmButton
-            action={archiveCard.bind(null, card.id)}
-            triggerClassName={`${iconBtn} hover:text-red-400`}
-            title="Arquivar card?"
-            description={`"${card.title}" será arquivado e sairá do quadro.`}
-            confirmLabel="Arquivar"
-          >
-            🗑
-          </ConfirmButton>
+      <div className="mt-2 flex items-center justify-between gap-0.5 border-t border-edge/60 pt-2">
+        {card.assignee ? (
+          <span title={card.assignee.name}>
+            <Avatar name={card.assignee.name} size={20} />
+          </span>
+        ) : (
+          <span />
         )}
+        <div className="flex items-center gap-0.5">
+          <Link href={href} className={iconBtn}>
+            abrir
+          </Link>
+          {canWrite && (
+            <ConfirmButton
+              action={archiveCard.bind(null, card.id)}
+              triggerClassName={`${iconBtn} hover:text-red-400`}
+              title="Arquivar card?"
+              description={`"${card.title}" será arquivado e sairá do quadro.`}
+              confirmLabel="Arquivar"
+            >
+              🗑
+            </ConfirmButton>
+          )}
+        </div>
       </div>
     </article>
   );

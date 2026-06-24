@@ -168,6 +168,7 @@ export async function createCard(
       description: parsed.data.description || null,
       rank: rankBetween(last?.rank ?? null, null),
       createdById: user.id,
+      assigneeId: user.id, // quem cria já fica como responsável
     },
   });
   await logActivity({
