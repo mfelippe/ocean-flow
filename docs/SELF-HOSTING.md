@@ -43,6 +43,37 @@ cd ocean-flow
 docker compose up --build -d
 ```
 
+## Primeiro acesso (setup)
+
+No **primeiro acesso**, a instância não tem usuários. Ao abrir a URL, você é
+levado automaticamente para **`/setup`**, onde cria a **conta de administrador
+da instância** (super admin) e a **primeira organização** — nos moldes do
+Uptime Kuma. Depois disso a tela de setup some e o login passa a valer
+normalmente.
+
+> Esse primeiro usuário é o **super admin**. Em instalações que já existiam
+> antes desta versão, o usuário mais antigo é promovido a super admin
+> automaticamente na atualização.
+
+## Administração da instância
+
+O super admin acessa **`/admin`** (link "Admin" no topo do painel) para:
+
+- ver totais de **usuários, organizações, quadros e cards**;
+- **resetar a senha** de um usuário (gera uma senha temporária exibida uma
+  única vez — repasse-a ao usuário, que pode trocá-la depois);
+- **bloquear/desbloquear** um usuário (o bloqueio derruba o acesso na hora e
+  impede novos logins).
+
+> **Promover/recuperar um super admin manualmente** (ex.: perdeu o acesso),
+> direto no banco:
+>
+> ```bash
+> docker compose -f docker-compose.release.yml exec db \
+>   psql -U oceanflow -d oceanflow \
+>   -c "UPDATE \"User\" SET \"isSuperAdmin\" = true WHERE email = 'voce@exemplo.com';"
+> ```
+
 ## Variáveis de ambiente
 
 | Variável        | Obrigatória | Descrição                                              |
@@ -52,6 +83,8 @@ docker compose up --build -d
 | `DATABASE_URL`  | não\*       | Postgres externo (`postgresql://...`). Padrão: banco embutido. \*Validada no start — erro se não for PostgreSQL. |
 | `PORT`          | não         | Porta exposta (padrão 3000)                            |
 | `UPLOAD_DIR`    | —           | Diretório de anexos (volume `/data/uploads`)           |
+| `API_RATE_LIMIT` | não        | Requisições por janela por token na API/MCP (padrão 120; `0` desliga) |
+| `API_RATE_WINDOW_SECONDS` | não | Tamanho da janela do rate limit em segundos (padrão 60) |
 
 ## Dados e volumes
 

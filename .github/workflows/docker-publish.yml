@@ -62,10 +62,15 @@ jobs:
     name: Deploy no VPS
     runs-on: ubuntu-latest
     needs: build-and-push
-    # Roda em tags v* OU quando workflow_dispatch com deploy=true
+    # Deploy via SSH é OPT-IN: só roda se a variável de repositório
+    # ENABLE_VPS_DEPLOY = "true" (Settings → Variables). Quem usa Coolify ou
+    # outro mecanismo (deploy no push) deixa desativado — a tag apenas publica
+    # a imagem no GHCR, sem SSH inesperado.
     if: |
-      startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'workflow_dispatch' && inputs.deploy == true)
+      vars.ENABLE_VPS_DEPLOY == 'true' && (
+        startsWith(github.ref, 'refs/tags/v') ||
+        (github.event_name == 'workflow_dispatch' && inputs.deploy == true)
+      )
     # Protege o ambiente de produção (opcional: configure em Settings → Environments)
     environment: production
     concurrency:
