@@ -11,6 +11,7 @@ import {
 import { BoardListView } from "@/components/board-list-view";
 import { BoardTableView } from "@/components/board-table-view";
 import { BoardCalendarView } from "@/components/board-calendar-view";
+import { BoardMetricsSheet } from "@/components/board-metrics-sheet";
 import { UserMenu } from "@/components/user-menu";
 import { ConfirmButton } from "@/components/confirm-button";
 import { inputClass } from "@/components/form";
@@ -93,6 +94,25 @@ export default async function BoardPage({
     })),
   );
 
+  // Métricas simples do quadro (cards ativos).
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const byAssigneeMap = new Map<string, number>();
+  for (const c of allCards) {
+    const key = c.assignee ?? "Sem responsável";
+    byAssigneeMap.set(key, (byAssigneeMap.get(key) ?? 0) + 1);
+  }
+  const metrics = {
+    total: allCards.length,
+    byColumn: initialColumns.map((c) => ({ name: c.name, count: c.cards.length })),
+    byAssignee: [...byAssigneeMap.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count),
+    overdue: allCards.filter((c) => c.dueDate && new Date(c.dueDate) < startOfToday)
+      .length,
+    noDue: allCards.filter((c) => !c.dueDate).length,
+  };
+
   return (
     <main className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b border-edge px-6 py-4">
@@ -151,11 +171,12 @@ export default async function BoardPage({
         </div>
       </header>
 
-      <div className="flex items-center border-b border-edge px-6 py-2">
+      <div className="flex items-center justify-between border-b border-edge px-6 py-2">
         <BoardViewSwitcher
           basePath={`/orgs/${slug}/boards/${boardId}`}
           current={view}
         />
+        <BoardMetricsSheet metrics={metrics} />
       </div>
 
       {view === "kanban" ? (
