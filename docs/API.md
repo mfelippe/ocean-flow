@@ -37,6 +37,57 @@ Configurável na instância via `API_RATE_LIMIT` (req por janela; `0` desliga) e
 servidor MCP (`/api/mcp`). Em deploy com múltiplas instâncias, o controle é
 por instância (in-memory).
 
+## Campos personalizados (fluxo completo)
+
+Um caso comum é criar um card já com valores de campos personalizados (ex.:
+telefone, prioridade, CPF). Como os `fieldId`s são específicos do quadro, o
+fluxo tem 3 passos:
+
+**1. Defina o campo pela UI.** Cada quadro tem sua lista de campos personalizados
+em `⚙️ Configurações do quadro → Campos personalizados` (só admin do quadro).
+Escolha nome (ex.: `Telefone`) e tipo (`TEXT`, `NUMBER` ou `DATE`).
+
+**2. Descubra os `fieldId`s pelo `GET /boards/{boardId}`.** A resposta traz o
+array `customFields` com as definições do quadro:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://seu-host/api/v1/boards/$BOARD_ID
+```
+
+```json
+{
+  "board": {
+    "id": "brd_1", "name": "Vendas",
+    "columns": [ /* … */ ],
+    "customFields": [
+      { "id": "fld_tel", "name": "Telefone", "type": "TEXT" },
+      { "id": "fld_pri", "name": "Prioridade", "type": "TEXT" }
+    ]
+  }
+}
+```
+
+**3. Crie o card já com os valores** — passe `fields` no POST (mapa `fieldId
+→ valor`):
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{
+    "columnId":"col_afazer",
+    "title":"Cliente Beta",
+    "fields": { "fld_tel": "5511988887777", "fld_pri": "Alta" }
+  }' \
+  https://seu-host/api/v1/boards/$BOARD_ID/cards
+```
+
+A resposta traz o `card` com o array `fields` já preenchido (mesmo shape do
+`GET /cards/{id}`). Para **atualizar** valores depois, envie o mesmo mapa
+`fields` num `PATCH /cards/{id}` — `""` (string vazia) limpa o campo. IDs
+fora do quadro são ignorados silenciosamente; valores inválidos para o tipo
+retornam `400: "NomeDoCampo: mensagem de erro"` (e no create fazem rollback,
+o card não é criado).
+
 ## Endpoints
 
 ### `GET /api/v1/me`
@@ -61,7 +112,8 @@ Lista os quadros da organização.
 
 ### `GET /api/v1/boards/{boardId}`
 
-Retorna um quadro com colunas e cards. `404` se o quadro não pertence à org do token.
+Retorna um quadro com colunas, cards e as definições dos campos personalizados
+(`customFields`). `404` se o quadro não pertence à org do token.
 
 ```json
 {
@@ -72,20 +124,26 @@ Retorna um quadro com colunas e cards. `404` se o quadro não pertence à org do
       { "id": "col_1", "name": "A Fazer", "cards": [
         { "id": "card_1", "title": "Tarefa", "description": null, "dueDate": null }
       ] }
+    ],
+    "customFields": [
+      { "id": "fld_1", "name": "Telefone", "type": "TEXT" }
     ]
   }
 }
 ```
 
+Use os ids de `customFields` para preencher `fields` no create/update de cards.
+
 ### `POST /api/v1/boards/{boardId}/cards`
 
 Cria um card numa coluna do quadro. Resposta `201`.
 
-| Campo         | Tipo   | Obrigatório |
-| ------------- | ------ | ----------- |
-| `columnId`    | string | sim         |
-| `title`       | string | sim         |
-| `description` | string | não         |
+| Campo         | Tipo   | Obrigatório | Descrição                                                        |
+| ------------- | ------ | ----------- | ---------------------------------------------------------------- |
+| `columnId`    | string | sim         | Coluna do quadro                                                 |
+| `title`       | string | sim         |                                                                  |
+| `description` | string | não         |                                                                  |
+| `fields`      | objeto | não         | mapa `fieldId → valor` — preenche campos personalizados na criação |
 
 ```bash
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
@@ -95,6 +153,26 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 
 ```json
 { "card": { "id": "...", "title": "Nova tarefa", "columnId": "col_1" } }
+```
+
+Se o request incluir `fields`, a resposta também traz `card.fields` (mesmo
+shape do `GET /cards/{id}`):
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"columnId":"col_1","title":"Cliente Beta","fields":{"fld_tel":"5511988887777"}}' \
+  https://seu-host/api/v1/boards/$BOARD_ID/cards
+```
+
+```json
+{
+  "card": {
+    "id": "card_new", "title": "Cliente Beta", "columnId": "col_1",
+    "fields": [
+      { "id": "fld_tel", "name": "Telefone", "type": "TEXT", "value": "5511988887777" }
+    ]
+  }
+}
 ```
 
 ### `GET /api/v1/cards/{cardId}`

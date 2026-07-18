@@ -70,6 +70,15 @@ export const customFieldSchema = z.object({
   type: z.enum(["TEXT", "NUMBER", "DATE"]),
 });
 
+// Criação de card pela API pública (columnId obrigatório; fields opcional).
+export const apiCardCreateSchema = z.object({
+  columnId: z.string().min(1, "columnId é obrigatório."),
+  title: z.string().trim().min(1, "Informe o título do card.").max(500),
+  description: z.string().max(5000).optional().or(z.literal("")),
+  // mapa fieldId → valor (string); "" limpa o campo
+  fields: z.record(z.string(), z.string()).optional(),
+});
+
 // Atualização parcial de card pela API pública (todos os campos opcionais).
 export const apiCardUpdateSchema = z.object({
   title: z.string().trim().min(1, "Título não pode ser vazio.").max(500).optional(),

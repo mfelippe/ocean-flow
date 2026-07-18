@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
 import { runAutomations } from "@/lib/automations";
+import { applyCardFields } from "@/lib/custom-fields";
 
 /**
  * Operações de Kanban escopadas a uma organização, reutilizadas pela API
@@ -37,6 +38,10 @@ export async function opGetBoard(organizationId: string, boardId: string) {
           },
         },
       },
+      customFields: {
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true, type: true },
+      },
     },
   });
   if (!board) throw new Error("Quadro não encontrado.");
@@ -49,13 +54,21 @@ export async function opGetBoard(organizationId: string, boardId: string) {
         name: c.name,
         cards: c.cards,
       })),
+      customFields: board.customFields,
     },
   };
 }
 
 export async function opCreateCard(
   organizationId: string,
-  input: { boardId: string; columnId: string; title: string; description?: string },
+  input: {
+    boardId: string;
+    columnId: string;
+    title: string;
+    description?: string;
+    fields?: Record<string, string>;
+    via?: string; // rótulo para o payload da atividade (ex.: "mcp", "api")
+  },
 ) {
   const board = await boardInOrg(input.boardId, organizationId);
   if (!board) throw new Error("Quadro não encontrado.");
@@ -69,20 +82,45 @@ export async function opCreateCard(
     where: { columnId: column.id, archivedAt: null },
     orderBy: { rank: "desc" },
   });
-  const card = await prisma.card.create({
-    data: {
-      columnId: column.id,
-      title: input.title,
-      description: input.description || null,
-      rank: rankBetween(last?.rank ?? null, null),
-    },
-  });
+
+  const hasFields = !!input.fields && Object.keys(input.fields).length > 0;
+
+  // Cria o card. Se o cliente enviou `fields`, roda create+applyCardFields
+  // numa transação: qualquer erro de validação dispara rollback (nada de card
+  // órfão com valores inválidos no banco).
+  const card = hasFields
+    ? await prisma.$transaction(async (tx) => {
+        const created = await tx.card.create({
+          data: {
+            columnId: column.id,
+            title: input.title,
+            description: input.description || null,
+            rank: rankBetween(last?.rank ?? null, null),
+          },
+        });
+        const res = await applyCardFields(
+          created.id,
+          input.boardId,
+          input.fields!,
+          tx,
+        );
+        if (res.error) throw new Error(res.error);
+        return created;
+      })
+    : await prisma.card.create({
+        data: {
+          columnId: column.id,
+          title: input.title,
+          description: input.description || null,
+          rank: rankBetween(last?.rank ?? null, null),
+        },
+      });
 
   await logActivity({
     boardId: input.boardId,
     cardId: card.id,
     type: "CARD_CREATED",
-    payload: { title: card.title, via: "mcp" },
+    payload: { title: card.title, via: input.via ?? "mcp" },
   });
   runAutomations({
     boardId: input.boardId,
@@ -90,6 +128,29 @@ export async function opCreateCard(
     columnId: column.id,
     cardId: card.id,
   });
+
+  // Só busca `fields` quando o cliente enviou (evita query extra no caminho comum).
+  if (hasFields) {
+    const boardFields = await prisma.customField.findMany({
+      where: { boardId: input.boardId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, type: true },
+    });
+    const values = await prisma.cardFieldValue.findMany({
+      where: { cardId: card.id },
+      select: { fieldId: true, value: true },
+    });
+    const valueBy = new Map(values.map((v) => [v.fieldId, v.value]));
+    const fields = boardFields.map((f) => ({
+      id: f.id,
+      name: f.name,
+      type: f.type,
+      value: valueBy.get(f.id) ?? null,
+    }));
+    return {
+      card: { id: card.id, title: card.title, columnId: card.columnId, fields },
+    };
+  }
 
   return { card: { id: card.id, title: card.title, columnId: card.columnId } };
 }

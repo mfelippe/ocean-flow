@@ -35,7 +35,8 @@ export const MCP_TOOLS: ToolDef[] = [
   },
   {
     name: "create_card",
-    description: "Cria um card numa coluna de um quadro.",
+    description:
+      "Cria um card numa coluna de um quadro. Aceita 'fields' opcional (mapa fieldId → valor) para preencher campos personalizados já na criação.",
     inputSchema: {
       type: "object",
       properties: {
@@ -43,6 +44,11 @@ export const MCP_TOOLS: ToolDef[] = [
         columnId: { type: "string" },
         title: { type: "string" },
         description: { type: "string" },
+        fields: {
+          type: "object",
+          description:
+            "Valores de campos personalizados: chave = fieldId (veja em get_board.customFields), valor = string.",
+        },
       },
       required: ["boardId", "columnId", "title"],
     },
@@ -90,6 +96,16 @@ function str(args: Record<string, unknown>, key: string): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+/** Coerce `args.fields` num Record<string,string>; ignora entradas inválidas. */
+function coerceFields(raw: unknown): Record<string, string> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "string") out[k] = v;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 /** Executa uma tool MCP escopada à organização do token. */
 export async function callTool(
   organizationId: string,
@@ -114,12 +130,16 @@ export async function callTool(
         if (!boardId || !columnId || !title) {
           return fail("boardId, columnId e title são obrigatórios.");
         }
+        // `fields` opcional: mapa fieldId → valor (string). Valores não-string
+        // são filtrados; `opCreateCard` valida os IDs contra o quadro.
+        const fields = coerceFields(args["fields"]);
         return ok(
           await opCreateCard(organizationId, {
             boardId,
             columnId,
             title,
             description: str(args, "description") || undefined,
+            fields,
           }),
         );
       }
