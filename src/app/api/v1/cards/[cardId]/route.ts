@@ -6,7 +6,7 @@ import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
 import { runAutomations } from "@/lib/automations";
 import { apiCardUpdateSchema } from "@/lib/validations";
-import { normalizeFieldValue } from "@/lib/custom-fields";
+import { applyCardFields } from "@/lib/custom-fields";
 
 /** Carrega um card garantindo que pertence à organização do token. */
 async function loadCardForOrg(cardId: string, organizationId: string) {
@@ -149,27 +149,11 @@ export async function PATCH(
       ? await prisma.card.update({ where: { id: cardId }, data })
       : card;
 
-  // Campos personalizados (mapa fieldId → valor; "" limpa).
+  // Campos personalizados (mapa fieldId → valor; "" limpa). Reusa o helper
+  // compartilhado com o create.
   if (input.fields) {
-    const boardFields = await prisma.customField.findMany({
-      where: { boardId: card.column.boardId },
-    });
-    const byId = new Map(boardFields.map((f) => [f.id, f]));
-    for (const [fieldId, raw] of Object.entries(input.fields)) {
-      const field = byId.get(fieldId);
-      if (!field) continue; // ignora ids fora do quadro
-      const norm = normalizeFieldValue(field.type, raw);
-      if ("error" in norm) return jsonError(400, `${field.name}: ${norm.error}`);
-      if (norm.value === "") {
-        await prisma.cardFieldValue.deleteMany({ where: { cardId, fieldId } });
-      } else {
-        await prisma.cardFieldValue.upsert({
-          where: { cardId_fieldId: { cardId, fieldId } },
-          update: { value: norm.value },
-          create: { cardId, fieldId, value: norm.value },
-        });
-      }
-    }
+    const res = await applyCardFields(cardId, card.column.boardId, input.fields);
+    if (res.error) return jsonError(400, res.error);
   }
 
   await logActivity({

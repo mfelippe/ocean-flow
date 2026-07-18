@@ -64,6 +64,26 @@ export function getOpenApiDocument() {
             columnId: { type: "string" },
           },
         },
+        BoardCustomField: {
+          type: "object",
+          description: "Definição de campo personalizado do quadro.",
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            type: { type: "string", enum: ["TEXT", "NUMBER", "DATE"] },
+          },
+          required: ["id", "name", "type"],
+        },
+        CardFieldValue: {
+          type: "object",
+          description: "Campo personalizado com o valor deste card.",
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            type: { type: "string", enum: ["TEXT", "NUMBER", "DATE"] },
+            value: { type: ["string", "null"] },
+          },
+        },
         CardFull: {
           type: "object",
           properties: {
@@ -189,12 +209,50 @@ export function getOpenApiDocument() {
       "/api/v1/boards/{boardId}": {
         get: {
           tags: ["Quadros"],
-          summary: "Quadro com colunas e cards",
+          summary: "Quadro com colunas, cards e definições de campos personalizados",
           parameters: [
             { name: "boardId", in: "path", required: true, schema: { type: "string" } },
           ],
           responses: {
-            "200": { description: "OK" },
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      board: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string" },
+                          name: { type: "string" },
+                          columns: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                id: { type: "string" },
+                                name: { type: "string" },
+                                cards: {
+                                  type: "array",
+                                  items: { $ref: "#/components/schemas/Card" },
+                                },
+                              },
+                            },
+                          },
+                          customFields: {
+                            type: "array",
+                            description:
+                              "Definições dos campos personalizados do quadro — use os ids ao preencher `fields` no create/update de cards.",
+                            items: { $ref: "#/components/schemas/BoardCustomField" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
             "401": errorResponse,
             "404": errorResponse,
             "429": errorResponse,
@@ -219,6 +277,12 @@ export function getOpenApiDocument() {
                     columnId: { type: "string" },
                     title: { type: "string" },
                     description: { type: "string" },
+                    fields: {
+                      type: "object",
+                      additionalProperties: { type: "string" },
+                      description:
+                        "Valores dos campos personalizados (mapa fieldId → valor). Use ids do array `customFields` do quadro.",
+                    },
                   },
                 },
               },
@@ -226,12 +290,28 @@ export function getOpenApiDocument() {
           },
           responses: {
             "201": {
-              description: "Criado",
+              description:
+                "Criado. Quando o request inclui `fields`, a resposta traz `card.fields` (senão só id/title/columnId).",
               content: {
                 "application/json": {
                   schema: {
                     type: "object",
-                    properties: { card: { $ref: "#/components/schemas/Card" } },
+                    properties: {
+                      card: {
+                        allOf: [
+                          { $ref: "#/components/schemas/Card" },
+                          {
+                            type: "object",
+                            properties: {
+                              fields: {
+                                type: "array",
+                                items: { $ref: "#/components/schemas/CardFieldValue" },
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    },
                   },
                 },
               },
