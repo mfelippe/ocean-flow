@@ -81,12 +81,46 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
   https://seu-host/api/v1/boards/$BOARD_ID/cards
 ```
 
-A resposta traz o `card` com o array `fields` já preenchido (mesmo shape do
-`GET /cards/{id}`). Para **atualizar** valores depois, envie o mesmo mapa
-`fields` num `PATCH /cards/{id}` — `""` (string vazia) limpa o campo. IDs
-fora do quadro são ignorados silenciosamente; valores inválidos para o tipo
-retornam `400: "NomeDoCampo: mensagem de erro"` (e no create fazem rollback,
-o card não é criado).
+A resposta 201 traz o `card` com o array `fields` já preenchido:
+
+```json
+{
+  "card": {
+    "id": "card_new",
+    "title": "Cliente Beta",
+    "columnId": "col_afazer",
+    "fields": [
+      { "id": "fld_tel", "name": "Telefone", "type": "TEXT", "value": "5511988887777" },
+      { "id": "fld_pri", "name": "Prioridade", "type": "TEXT", "value": "Alta" }
+    ]
+  }
+}
+```
+
+Para **atualizar** valores depois, use o mesmo mapa `fields` num `PATCH
+/cards/{id}`.
+
+### Formato dos valores por tipo
+
+| Tipo     | Formato                                 | Exemplo         |
+| -------- | --------------------------------------- | --------------- |
+| `TEXT`   | qualquer string                         | `"5511988887777"` |
+| `NUMBER` | string numérica (inteiro ou decimal)    | `"32"`, `"3.14"`, `"-5"` |
+| `DATE`   | string ISO `AAAA-MM-DD`                 | `"2026-08-01"`  |
+
+### Comportamentos
+
+| Situação                                  | Resultado                                                                     |
+| ----------------------------------------- | ----------------------------------------------------------------------------- |
+| `fields` **não** enviado                  | Card criado sem valores; resposta minimal (`id/title/columnId`, sem `fields`) |
+| `fieldId` que **não existe** no quadro    | **Ignorado silenciosamente** (não falha)                                      |
+| Valor inválido para o tipo                | `400 "NomeDoCampo: mensagem"` e — no create — **rollback** (card não é criado) |
+| `""` (string vazia) num `PATCH`           | **Limpa** o valor daquele campo                                               |
+| `""` (string vazia) num `POST`            | Equivalente a não informar (nenhum valor é gravado)                           |
+
+> 💡 **Dica**: teste interativamente em [`/api-docs`](/api-docs) direto do seu
+> browser (é uma página com Try it embutido — cole o token uma vez e envie
+> requests reais contra a instância).
 
 ## Endpoints
 
