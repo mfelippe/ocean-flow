@@ -83,10 +83,11 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 
 A resposta traz o `card` com o array `fields` já preenchido (mesmo shape do
 `GET /cards/{id}`). Para **atualizar** valores depois, envie o mesmo mapa
-`fields` num `PATCH /cards/{id}` — `""` (string vazia) limpa o campo. IDs
-fora do quadro são ignorados silenciosamente; valores inválidos para o tipo
-retornam `400: "NomeDoCampo: mensagem de erro"` (e no create fazem rollback,
-o card não é criado).
+`fields` num `PATCH /cards/{id}` — `""` (string vazia) limpa o campo. Um
+`fieldId` que não pertence ao quadro retorna `400` (use sempre os ids de
+`customFields`, não o nome do campo); valores inválidos para o tipo retornam
+`400: "NomeDoCampo: mensagem de erro"` (e no create fazem rollback, o card
+não é criado).
 
 ## Endpoints
 
