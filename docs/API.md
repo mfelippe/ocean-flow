@@ -113,7 +113,7 @@ Para **atualizar** valores depois, use o mesmo mapa `fields` num `PATCH
 | Situação                                  | Resultado                                                                     |
 | ----------------------------------------- | ----------------------------------------------------------------------------- |
 | `fields` **não** enviado                  | Card criado sem valores; resposta minimal (`id/title/columnId`, sem `fields`) |
-| `fieldId` que **não existe** no quadro    | **Ignorado silenciosamente** (não falha)                                      |
+| `fieldId` que **não existe** no quadro    | `400 "Campo personalizado \"<id>\" não pertence a este quadro."` e — no create — **rollback** (card não é criado). Use sempre os `id`s de `customFields`, não o nome do campo. |
 | Valor inválido para o tipo                | `400 "NomeDoCampo: mensagem"` e — no create — **rollback** (card não é criado) |
 | `""` (string vazia) num `PATCH`           | **Limpa** o valor daquele campo                                               |
 | `""` (string vazia) num `POST`            | Equivalente a não informar (nenhum valor é gravado)                           |
