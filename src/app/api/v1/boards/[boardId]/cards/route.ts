@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireApiToken } from "@/lib/api-auth";
 import { opCreateCard } from "@/lib/kanban-ops";
-import { apiCardCreateSchema } from "@/lib/validations";
+import { apiCardCreateSchema, zodErrorMessage } from "@/lib/validations";
 
 export async function POST(
   request: Request,
@@ -20,7 +20,7 @@ export async function POST(
 
   const parsed = apiCardCreateSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(400, parsed.error.issues[0]?.message ?? "Dados inválidos.");
+    return jsonError(400, zodErrorMessage(parsed.error));
   }
 
   try {

@@ -274,16 +274,26 @@ export function getOpenApiDocument() {
                   type: "object",
                   required: ["columnId", "title"],
                   properties: {
-                    columnId: { type: "string" },
+                    columnId: {
+                      type: "string",
+                      description: "Id de uma COLUNA do quadro (não é o boardId). Pegue em `columns[].id` do GET /boards/{boardId}.",
+                    },
                     title: { type: "string" },
                     description: { type: "string" },
                     fields: {
                       type: "object",
                       additionalProperties: { type: "string" },
                       description:
-                        "Valores dos campos personalizados (mapa fieldId → valor). Use ids do array `customFields` do quadro.",
+                        "Campos personalizados como OBJETO/mapa `fieldId → valor` (string) — NÃO é uma lista de `{id,value}`. Pegue os ids em `customFields[].id` do GET /boards/{boardId}. Ex.: {\"cmld1f13ld0tel\": \"5511988887777\"}.",
+                      example: { cmld1f13ld0tel: "5511988887777" },
                     },
                   },
+                },
+                example: {
+                  columnId: "cmld0c0lumn0afazer",
+                  title: "Cliente Beta",
+                  description: "Contato via WhatsApp",
+                  fields: { cmld1f13ld0tel: "5511988887777" },
                 },
               },
             },
@@ -367,9 +377,15 @@ export function getOpenApiDocument() {
                     fields: {
                       type: "object",
                       additionalProperties: { type: "string" },
-                      description: "mapa fieldId → valor (campos personalizados; \"\" limpa)",
+                      description:
+                        "Campos personalizados como OBJETO/mapa `fieldId → valor` (string) — NÃO é uma lista de `{id,value}`. `\"\"` limpa o campo. Ids em `customFields[].id` do GET /boards/{boardId}.",
+                      example: { cmld1f13ld0tel: "5511988887777" },
                     },
                   },
+                },
+                example: {
+                  title: "Cliente Beta (atualizado)",
+                  fields: { cmld1f13ld0tel: "5511988887777" },
                 },
               },
             },

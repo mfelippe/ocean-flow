@@ -5,7 +5,7 @@ import { jsonError, requireApiToken } from "@/lib/api-auth";
 import { rankBetween } from "@/lib/rank";
 import { logActivity } from "@/lib/activity";
 import { runAutomations } from "@/lib/automations";
-import { apiCardUpdateSchema } from "@/lib/validations";
+import { apiCardUpdateSchema, zodErrorMessage } from "@/lib/validations";
 import { applyCardFields } from "@/lib/custom-fields";
 
 /** Carrega um card garantindo que pertence à organização do token. */
@@ -105,7 +105,7 @@ export async function PATCH(
 
   const parsed = apiCardUpdateSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(400, parsed.error.issues[0]?.message ?? "Dados inválidos.");
+    return jsonError(400, zodErrorMessage(parsed.error));
   }
   const input = parsed.data;
 

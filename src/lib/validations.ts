@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+/**
+ * Formata o primeiro erro de validação incluindo o caminho do campo, para a
+ * resposta da API. Ex.: `fields` enviado como array vira
+ * "fields: Invalid input: expected record, received array" — bem mais útil
+ * para debugar que o "Invalid input" cru.
+ */
+export function zodErrorMessage(error: z.ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) return "Dados inválidos.";
+  const path = issue.path.join(".");
+  return path ? `${path}: ${issue.message}` : issue.message;
+}
+
 export const registerSchema = z.object({
   name: z.string().trim().min(2, "Informe seu nome."),
   email: z.email("E-mail inválido.").toLowerCase(),
@@ -76,7 +89,11 @@ export const apiCardCreateSchema = z.object({
   title: z.string().trim().min(1, "Informe o título do card.").max(500),
   description: z.string().max(5000).optional().or(z.literal("")),
   // mapa fieldId → valor (string); "" limpa o campo
-  fields: z.record(z.string(), z.string()).optional(),
+  fields: z
+    .record(z.string(), z.string(), {
+      error: "deve ser um objeto (mapa fieldId → valor), não uma lista.",
+    })
+    .optional(),
 });
 
 // Atualização parcial de card pela API pública (todos os campos opcionais).
@@ -86,7 +103,11 @@ export const apiCardUpdateSchema = z.object({
   dueDate: z.string().nullable().optional(),
   columnId: z.string().min(1).optional(),
   // mapa fieldId → valor (string); "" limpa o campo
-  fields: z.record(z.string(), z.string()).optional(),
+  fields: z
+    .record(z.string(), z.string(), {
+      error: "deve ser um objeto (mapa fieldId → valor), não uma lista.",
+    })
+    .optional(),
 });
 
 // ─── Automações (gatilho → ações) ────────────────────────────────────

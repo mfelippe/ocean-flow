@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireApiToken } from "@/lib/api-auth";
 import { logActivity } from "@/lib/activity";
-import { commentSchema } from "@/lib/validations";
+import { commentSchema, zodErrorMessage } from "@/lib/validations";
 
 export async function POST(
   request: Request,
@@ -29,7 +29,7 @@ export async function POST(
 
   const parsed = commentSchema.safeParse({ body: body.body });
   if (!parsed.success) {
-    return jsonError(400, parsed.error.issues[0]?.message ?? "Dados inválidos.");
+    return jsonError(400, zodErrorMessage(parsed.error));
   }
 
   const comment = await prisma.comment.create({
