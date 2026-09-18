@@ -17,6 +17,13 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Versão/commit assados no build (passados como build-args pelo workflow de
+# publish). Expostos em runtime pelo /api/health.
+ARG APP_VERSION=dev
+ARG GIT_SHA=
+ENV APP_VERSION=$APP_VERSION
+ENV GIT_SHA=$GIT_SHA
+
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 

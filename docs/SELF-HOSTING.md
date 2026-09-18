@@ -142,6 +142,17 @@ As migrations pendentes são aplicadas automaticamente no start do container.
 
 ## Saúde
 
-O endpoint `GET /api/health` retorna `{"status":"ok","db":"up"}` (HTTP 200) ou
+O endpoint `GET /api/health` retorna
+`{"status":"ok","db":"up","version":"0.4.1","commit":"a1b2c3d"}` (HTTP 200) ou
 `503` se o banco estiver inacessível — útil para o healthcheck do Docker e para
 monitores externos. Os containers já têm healthcheck configurado.
+
+`version`/`commit` são assados na imagem no build (a versão vem da tag; o
+commit é o SHA curto). É a forma mais simples de **conferir a versão instalada**:
+
+```bash
+curl -s https://seu-host/api/health
+```
+
+(Em build local sem esses valores, `version` vem como `"dev"` e `commit` como
+`null`.)
