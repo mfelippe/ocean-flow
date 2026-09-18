@@ -65,8 +65,25 @@ O super admin acessa **`/admin`** (link "Admin" no topo do painel) para:
 - **bloquear/desbloquear** um usuário (o bloqueio derruba o acesso na hora e
   impede novos logins).
 
-> **Promover/recuperar um super admin manualmente** (ex.: perdeu o acesso),
-> direto no banco:
+### Recuperar o acesso do admin (perdeu a senha)
+
+Se você **perdeu a senha do super admin** e não consegue mais entrar no `/admin`,
+rode o script de reset **no servidor** (dentro do container da app). Ele pede o
+e-mail e uma nova senha (digitada oculta), atualiza o hash, **desbloqueia** a
+conta e **garante o super admin** — sem apagar dados nem recriar a organização:
+
+```bash
+docker compose -f docker-compose.release.yml exec app node scripts/reset-admin.mjs
+```
+
+- Se o e-mail informado **existe**, a senha é redefinida.
+- Se **não existe**, o script oferece criar um novo super admin (vinculado a uma
+  organização existente como OWNER, quando houver).
+
+Rode num terminal interativo (o `exec` do Compose já aloca um TTY) para o campo
+de senha ficar oculto. Como exige acesso ao servidor, não há superfície web nova.
+
+> **Só promover a super admin** (sem trocar senha), direto no banco:
 >
 > ```bash
 > docker compose -f docker-compose.release.yml exec db \

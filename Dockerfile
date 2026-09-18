@@ -31,6 +31,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder /app/scripts/check-env.mjs ./scripts/check-env.mjs
+# Reset de senha do admin, operacional (docker compose exec app node scripts/reset-admin.mjs).
+COPY --from=builder /app/scripts/reset-admin.mjs ./scripts/reset-admin.mjs
 
 # Diretório de anexos (montado como volume em produção).
 RUN mkdir -p /data/uploads && chown -R nextjs:nodejs /data

@@ -35,8 +35,10 @@ type FieldsClient = PrismaClient | Prisma.TransactionClient;
 
 /**
  * Aplica um mapa `fieldId → valor` de campos personalizados a um card.
- * Fluxo idêntico ao do PATCH: ids fora do quadro são ignorados; valores
- * inválidos retornam `{ error }` já formatado (`"NomeDoCampo: mensagem"`);
+ * Valida tudo antes de gravar (nada de escrita parcial): um `fieldId` que
+ * não pertence ao quadro retorna `{ error }` — evita a perda silenciosa em
+ * que o valor era descartado e o card voltava com o campo vazio. Valores
+ * inválidos retornam `{ error }` formatado (`"NomeDoCampo: mensagem"`);
  * valores vazios apagam a linha, senão faz `upsert`.
  *
  * Passe `client` (um `Prisma.TransactionClient`) para rodar dentro de uma
@@ -52,18 +54,27 @@ export async function applyCardFields(
   const boardFields = await db.customField.findMany({ where: { boardId } });
   const byId = new Map(boardFields.map((f) => [f.id, f]));
 
+  // Valida todos os ids/valores antes de gravar, para não deixar escrita
+  // parcial quando um id posterior for inválido (o PATCH não roda em transação).
+  const writes: { fieldId: string; value: string }[] = [];
   for (const [fieldId, raw] of Object.entries(fields)) {
     const field = byId.get(fieldId);
-    if (!field) continue; // ignora ids fora do quadro (compat com PATCH atual)
+    if (!field) {
+      return { error: `Campo personalizado "${fieldId}" não pertence a este quadro.` };
+    }
     const norm = normalizeFieldValue(field.type, raw);
     if ("error" in norm) return { error: `${field.name}: ${norm.error}` };
-    if (norm.value === "") {
+    writes.push({ fieldId, value: norm.value });
+  }
+
+  for (const { fieldId, value } of writes) {
+    if (value === "") {
       await db.cardFieldValue.deleteMany({ where: { cardId, fieldId } });
     } else {
       await db.cardFieldValue.upsert({
         where: { cardId_fieldId: { cardId, fieldId } },
-        update: { value: norm.value },
-        create: { cardId, fieldId, value: norm.value },
+        update: { value },
+        create: { cardId, fieldId, value },
       });
     }
   }
