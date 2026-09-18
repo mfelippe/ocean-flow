@@ -16,7 +16,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "admin:reset": "node scripts/reset-admin.mjs"
   },
   "prisma": {
     "seed": "node --experimental-strip-types prisma/seed.ts"
